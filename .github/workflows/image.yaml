@@ -38,3 +38,16 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/dsh:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: helm lint helm/dsh && helm package helm/dsh
+
+      # Tag is the chart's version; pushing an unchanged version overwrites it.
+      - if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+          helm push dsh-*.tgz "oci://ghcr.io/${{ github.repository_owner }}/charts"
