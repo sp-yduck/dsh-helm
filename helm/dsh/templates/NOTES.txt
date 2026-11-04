@@ -1,0 +1,10 @@
+dsh issues a new launch token on every start. Get the login URL with:
+
+  kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "dsh.fullname" . }} | grep token=
+
+{{- if .Values.ingress.enabled }}
+Open it via https://{{ (first .Values.ingress.hosts).host }}/?token=<token>
+{{- else }}
+dsh listens on the pod IP only, so `kubectl port-forward` (which dials the pod's loopback) does not work.
+Reach it through the Service / an Ingress, and add the hostname you use to `trustedHosts`.
+{{- end }}

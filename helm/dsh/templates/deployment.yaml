@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dsh.fullname" . }}
+  labels: {{- include "dsh.labels" . | nindent 4 }}
+spec:
+  replicas: 1  # single-process app with local state on a RWO volume
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {{- include "dsh.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "dsh.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: dsh
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            {{- range .Values.trustedHosts }}
+            - --trusted-host={{ . }}
+            {{- end }}
+            {{- if .Values.ingress.enabled }}
+            {{- range .Values.ingress.hosts }}
+            - --trusted-host={{ .host }}
+            {{- end }}
+            {{- end }}
+            {{- with .Values.publicUrl }}
+            - --public-url={{ . }}
+            {{- end }}
+            {{- range .Values.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          env:
+            # dsh rejects wildcard binds, so listen on the pod IP.
+            - name: DSH_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: DSH_PORT
+              value: "3080"
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 3080
+          # HTTP endpoints require the launch token, so probe the socket.
+          readinessProbe:
+            tcpSocket:
+              port: http
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- with .Values.resources }}
+          resources: {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "dsh.fullname" .) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}

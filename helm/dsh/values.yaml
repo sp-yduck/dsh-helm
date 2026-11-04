@@ -1,0 +1,40 @@
+image:
+  repository: dsh
+  tag: ""            # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# Browser-facing authority (host or host:port). dsh answers 403 to any other Host
+# header than loopback/pod IP, so list every name browsers use. Ingress hosts are added automatically.
+trustedHosts: []
+# Advertised root shown in the startup URL, e.g. https://dsh.example.com/
+publicUrl: ""
+extraArgs: []
+
+# API keys etc. e.g. envFrom: [{secretRef: {name: dsh-llm-keys}}]
+env: []
+envFrom: []
+
+service:
+  type: ClusterIP
+  port: 3080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: dsh.example.com
+  tls: []
+
+# Holds $DSH_HOME (settings, sessions, credentials) and /data/workspace.
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: ""
+  existingClaim: ""
+
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
