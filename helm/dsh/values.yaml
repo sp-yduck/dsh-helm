@@ -1,5 +1,5 @@
 image:
-  repository: dsh
+  repository: ghcr.io/sp-yduck/dsh
   tag: ""            # defaults to .Chart.AppVersion
   pullPolicy: IfNotPresent
 imagePullSecrets: []

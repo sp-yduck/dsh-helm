@@ -28,6 +28,14 @@ The `DSH_VERSION` build argument selects the npm version. The default is `0.2.1-
 docker build --build-arg DSH_VERSION=0.2.2-rc.1 -t <registry>/dsh:0.2.2-rc.1 .
 ```
 
+GitHub Actions (`.github/workflows/image.yaml`) builds the image on every pull request and, on each push to `main`, pushes `ghcr.io/<owner>/dsh:<appVersion>` and `ghcr.io/<owner>/dsh:latest`. The workflow passes the chart's `appVersion` as `DSH_VERSION`, so to release a new dsh version, change `appVersion` in `helm/dsh/Chart.yaml`.
+
+The same workflow lints and packages the chart, and on each push to `main` pushes it to `oci://ghcr.io/<owner>/charts/dsh`, tagged with the chart's `version`. Bump `version` when you change the chart, because pushing the same version overwrites it. To install from GHCR, run:
+
+```sh
+helm install dsh oci://ghcr.io/<owner>/charts/dsh --version <version>
+```
+
 ## Try the image locally
 
 To run the UI on your machine without Kubernetes, run:

@@ -6,7 +6,7 @@ The chart deploys the DeepSeek Harness Web UI. The [repository README](../../REA
 
 | Value | Default | Description |
 | --- | --- | --- |
-| `image.repository` | `dsh` | Image repository. |
+| `image.repository` | `ghcr.io/sp-yduck/dsh` | Image repository. |
 | `image.tag` | `""` | Image tag. An empty value uses the chart `appVersion`, `0.2.1-rc.5`. |
 | `image.pullPolicy` | `IfNotPresent` | Image pull policy. |
 | `imagePullSecrets` | `[]` | Pull secrets for a private registry. |
