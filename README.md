@@ -33,7 +33,7 @@ GitHub Actions (`.github/workflows/image.yaml`) builds the image on every pull r
 The same workflow lints and packages the chart, and on each push to `main` pushes it to `oci://ghcr.io/<owner>/charts/dsh`, tagged with the chart's `version`. Bump `version` when you change the chart, because pushing the same version overwrites it. To install from GHCR, run:
 
 ```sh
-helm install dsh oci://ghcr.io/<owner>/charts/dsh --version <version> --set image.repository=ghcr.io/<owner>/dsh
+helm install dsh oci://ghcr.io/<owner>/charts/dsh --version <version>
 ```
 
 ## Try the image locally
