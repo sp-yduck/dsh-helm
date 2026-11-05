@@ -24,6 +24,13 @@ kubectl logs deploy/dsh -f | grep -m1 token=
 
 The log prints a login URL with the pod IP. dsh listens only on the pod IP, so `kubectl port-forward` does not work; open the UI through an Ingress (see [Install the chart](#install-the-chart)) or from inside the cluster network. Then add a model API key under **Settings → Models**.
 
+If your tooling does not support OCI charts, use the classic Helm repository instead:
+
+```sh
+helm repo add dsh https://sp-yduck.github.io/dsh-helm
+helm install dsh dsh/dsh
+```
+
 To pin a version, add `--version <chart version>`. The [packages page](https://github.com/sp-yduck/dsh-helm/pkgs/container/charts%2Fdsh) lists the published versions.
 
 ## Requirements
