@@ -20,7 +20,9 @@ jobs:
         run: echo "dsh=$(yq '.appVersion' helm/dsh/Chart.yaml)" >> "$GITHUB_OUTPUT"
 
       # arm64 is emulated, so pull requests build amd64 only to stay fast.
-      - uses: docker/setup-qemu-action@v3
+      # arm64 is emulated, so pull requests build amd64 only to stay fast.
+      - if: github.event_name != 'pull_request'
+        uses: docker/setup-qemu-action@v3
 
       - uses: docker/setup-buildx-action@v3
 
@@ -34,7 +36,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           build-args: DSH_VERSION=${{ steps.version.outputs.dsh }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
