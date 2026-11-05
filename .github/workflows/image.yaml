@@ -114,7 +114,13 @@ jobs:
 
       - name: Unit tests
         run: |
-          helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.0.3 --verify=false
+          # GitHub release downloads fail now and then; retry instead of failing the release.
+          for i in 1 2 3; do
+            helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.0.3 --verify=false && break
+            helm plugin uninstall unittest >/dev/null 2>&1 || true
+            [ "$i" = 3 ] && exit 1
+            sleep $((i * 10))
+          done
           helm unittest helm/dsh
 
       # Render the chart with default and feature-rich values and validate the manifests against the Kubernetes schemas.
