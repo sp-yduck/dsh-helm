@@ -89,3 +89,21 @@ tests:
       ingress.hosts: [{ host: a.example.com }, {}]
     asserts:
       - equal: { path: "spec.template.spec.containers[0].args", value: [--trusted-host=a.example.com] }
+  - it: installs no plugins by default
+    asserts:
+      - lengthEqual: { path: spec.template.spec.initContainers, count: 1 }
+  - it: installs plugins in an init container
+    set:
+      plugins: [github:sp-yduck/dsh-ollama-cloud]
+      envFrom: [{ secretRef: { name: keys } }]
+    asserts:
+      - equal: { path: "spec.template.spec.initContainers[1].name", value: plugins }
+      - equal:
+          path: spec.template.spec.initContainers[1].command
+          value: [dsh, plugin, --profile, web, add]
+      - equal:
+          path: spec.template.spec.initContainers[1].args
+          value: [github:sp-yduck/dsh-ollama-cloud]
+      - equal:
+          path: spec.template.spec.initContainers[1].envFrom
+          value: [{ secretRef: { name: keys } }]

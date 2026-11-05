@@ -60,6 +60,12 @@
         "type": "string"
       }
     },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "env": {
       "type": "array",
       "items": {
