@@ -1,0 +1,39 @@
+suite: optional resources
+tests:
+  - it: creates a PVC by default
+    template: templates/pvc.yaml
+    asserts:
+      - hasDocuments: { count: 1 }
+      - equal: { path: spec.resources.requests.storage, value: 10Gi }
+  - it: skips the PVC for an existing claim
+    template: templates/pvc.yaml
+    set: { persistence.existingClaim: mine }
+    asserts:
+      - hasDocuments: { count: 0 }
+  - it: skips the PVC without persistence
+    template: templates/pvc.yaml
+    set: { persistence.enabled: false }
+    asserts:
+      - hasDocuments: { count: 0 }
+  - it: creates no Ingress by default
+    template: templates/ingress.yaml
+    asserts:
+      - hasDocuments: { count: 0 }
+  - it: routes every ingress host to the Service
+    template: templates/ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.className: nginx
+      ingress.hosts: [{ host: a.example.com }, { host: b.example.com }]
+      ingress.tls: [{ hosts: [a.example.com], secretName: tls }]
+    asserts:
+      - equal: { path: spec.ingressClassName, value: nginx }
+      - equal: { path: "spec.rules[1].host", value: b.example.com }
+      - equal: { path: "spec.rules[0].http.paths[0].backend.service.name", value: RELEASE-NAME-dsh }
+      - equal: { path: "spec.tls[0].secretName", value: tls }
+  - it: exposes the http port on the Service
+    template: templates/service.yaml
+    set: { service.port: 8080 }
+    asserts:
+      - equal: { path: "spec.ports[0].port", value: 8080 }
+      - equal: { path: "spec.ports[0].targetPort", value: http }

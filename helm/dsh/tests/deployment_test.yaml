@@ -1,0 +1,84 @@
+suite: deployment
+templates:
+  - templates/deployment.yaml
+tests:
+  - it: uses the chart appVersion as the default image tag
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/sp-yduck/dsh:0.2.1-rc.5
+        chart:
+          appVersion: 0.2.1-rc.5
+  - it: honors image.tag
+    set:
+      image.tag: custom
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/sp-yduck/dsh:custom
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: ghcr.io/sp-yduck/dsh:custom
+  - it: runs one replica with the Recreate strategy
+    asserts:
+      - equal: { path: spec.replicas, value: 1 }
+      - equal: { path: spec.strategy.type, value: Recreate }
+  - it: binds dsh to the pod IP
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DSH_HOST
+            valueFrom: { fieldRef: { fieldPath: status.podIP } }
+  - it: gives /data/workspace to the node user in an init container
+    asserts:
+      - equal: { path: "spec.template.spec.initContainers[0].securityContext.runAsUser", value: 0 }
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].command[2]
+          pattern: chown 1000:1000 /data/workspace
+      - equal: { path: spec.template.spec.securityContext.fsGroup, value: 1000 }
+  - it: trusts ingress hosts only when the ingress is enabled
+    set:
+      trustedHosts: [a.example.com]
+      ingress.hosts: [{ host: b.example.com }]
+    asserts:
+      - contains: { path: "spec.template.spec.containers[0].args", content: --trusted-host=a.example.com }
+      - notContains: { path: "spec.template.spec.containers[0].args", content: --trusted-host=b.example.com }
+  - it: adds ingress hosts to the trusted hosts
+    set:
+      ingress.enabled: true
+      ingress.hosts: [{ host: b.example.com }]
+    asserts:
+      - contains: { path: "spec.template.spec.containers[0].args", content: --trusted-host=b.example.com }
+  - it: passes publicUrl and extraArgs
+    set:
+      publicUrl: https://dsh.example.com/
+      extraArgs: [--foo]
+    asserts:
+      - contains: { path: "spec.template.spec.containers[0].args", content: --public-url=https://dsh.example.com/ }
+      - contains: { path: "spec.template.spec.containers[0].args", content: --foo }
+  - it: mounts the chart PVC by default
+    asserts:
+      - equal: { path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName", value: RELEASE-NAME-dsh }
+  - it: mounts an existing claim
+    set:
+      persistence.existingClaim: mine
+    asserts:
+      - equal: { path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName", value: mine }
+  - it: uses an emptyDir without persistence
+    set:
+      persistence.enabled: false
+    asserts:
+      - exists: { path: "spec.template.spec.volumes[0].emptyDir" }
+  - it: adds pod metadata and extra volumes
+    set:
+      podAnnotations: { a: b }
+      podLabels: { x: y }
+      extraVolumes: [{ name: k, secret: { secretName: s } }]
+      extraVolumeMounts: [{ name: k, mountPath: /k }]
+    asserts:
+      - equal: { path: spec.template.metadata.annotations.a, value: b }
+      - equal: { path: spec.template.metadata.labels.x, value: y }
+      - equal: { path: "spec.template.metadata.labels[\"app.kubernetes.io/name\"]", value: dsh }
+      - contains: { path: spec.template.spec.volumes, content: { name: k, secret: { secretName: s } } }
+      - contains: { path: "spec.template.spec.containers[0].volumeMounts", content: { name: k, mountPath: /k } }
