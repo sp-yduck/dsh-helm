@@ -120,3 +120,30 @@ jobs:
             "$version" "$app" "${{ github.repository_owner }}" "$version")
           gh release create "$tag" dsh-*.tgz --target "$GITHUB_SHA" --title "dsh chart $version" \
             --notes "$notes" --generate-notes
+
+      # Classic Helm repository on GitHub Pages (helm repo add); the chart archives stay attached to the GitHub Releases.
+      - if: github.event_name != 'pull_request'
+        run: |
+          version=$(yq '.version' helm/dsh/Chart.yaml)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch -q origin gh-pages 2>/dev/null; then
+            git worktree add -q site FETCH_HEAD
+            git -C site checkout -q -B gh-pages
+          else
+            git worktree add -q --detach site
+            git -C site checkout -q --orphan gh-pages
+            git -C site rm -rqf .
+          fi
+          if [ -f site/index.yaml ] && yq -e ".entries.dsh[] | select(.version == \"$version\")" site/index.yaml >/dev/null 2>&1; then
+            echo "::notice::index.yaml already lists $version; skipping"
+            exit 0
+          fi
+          mkdir -p pkg && cp dsh-*.tgz pkg/
+          merge=""; [ -f site/index.yaml ] && merge="--merge site/index.yaml"
+          helm repo index pkg --url "https://github.com/${{ github.repository }}/releases/download/dsh-$version" $merge
+          cp pkg/index.yaml site/index.yaml
+          touch site/.nojekyll
+          git -C site add index.yaml .nojekyll
+          git -C site commit -q -m "index: dsh $version"
+          git -C site push -q origin gh-pages
