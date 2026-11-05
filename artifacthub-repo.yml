@@ -1,0 +1,5 @@
+# Artifact Hub repository metadata (Verified publisher).
+# CI publishes it to the OCI chart repository (tag artifacthub.io) and to GitHub Pages.
+repositoryID: bd095502-3b07-45f1-83ed-a71b3aeb16ac
+owners:
+  - name: sp-yduck
