@@ -13,6 +13,7 @@ The chart deploys the DeepSeek Harness Web UI. The [repository README](../../REA
 | `trustedHosts` | `[]` | Hosts that the dsh `/api` host check accepts, as `host` or `host:port`. A host without a port matches any port. The chart adds every `ingress.hosts[].host` when `ingress.enabled` is true. Each entry becomes a `--trusted-host` argument. |
 | `publicUrl` | `""` | Root URL that dsh prints in the login URL, such as `https://dsh.example.com/`. Becomes `--public-url`. It changes only the printed URL and does not admit a host. |
 | `extraArgs` | `[]` | More arguments for `dsh --profile web`. Run `dsh web --help` for the list. |
+| `plugins` | `[]` | Plugin bundles installed with `dsh plugin --profile web add` before dsh starts, e.g. `github:sp-yduck/dsh-ollama-cloud`. Pin a commit with `#<sha>`. |
 | `env` | `[]` | Extra container environment variables, in Kubernetes `env` format. |
 | `envFrom` | `[]` | Extra environment sources, in Kubernetes `envFrom` format. Use it to pass API keys from a Secret. |
 | `service.type` | `ClusterIP` | Service type. |

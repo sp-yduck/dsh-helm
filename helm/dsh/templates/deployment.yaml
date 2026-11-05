@@ -52,6 +52,24 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+        {{- if .Values.plugins }}
+        # Installs plugin bundles into the web profile on the volume before dsh starts.
+        - name: plugins
+          image: {{ include "dsh.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          command: ["dsh", "plugin", "--profile", "web", "add"]
+          args: {{- toYaml .Values.plugins | nindent 12 }}
+          {{- with .Values.env }}
+          env: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+        {{- end }}
       containers:
         - name: dsh
           image: {{ include "dsh.image" . | quote }}

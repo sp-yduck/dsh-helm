@@ -12,6 +12,10 @@ trustedHosts: []
 publicUrl: ""
 extraArgs: []
 
+# dsh plugin bundles installed into the web profile at pod start (`dsh plugin --profile web add`),
+# e.g. [github:sp-yduck/dsh-ollama-cloud]. Pin a commit (#<sha>) so a later push cannot change what runs.
+plugins: []
+
 # API keys etc. e.g. envFrom: [{secretRef: {name: dsh-llm-keys}}]
 env: []
 envFrom: []
