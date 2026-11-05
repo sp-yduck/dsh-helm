@@ -163,7 +163,7 @@ The chart assumes that whoever logs in can run any command in the pod, and limit
 
 - **No Kubernetes API token.** The pod uses its own ServiceAccount with `automountServiceAccountToken: false`.
 - **Non-root, no capabilities.** dsh runs as UID 1000 with all capabilities dropped, no privilege escalation, and the `RuntimeDefault` seccomp profile. The only root step is an init container that may `chown` the workspace directory.
-- **NetworkPolicy.** Only port 3080 accepts traffic. Egress reaches DNS and the internet, but not the cluster network, the Kubernetes API, node addresses, or cloud metadata endpoints. Add exceptions in `networkPolicy.egress.extra`.
+- **NetworkPolicy.** Only port 3080 accepts traffic. Egress reaches DNS and the internet, but not other pods, node addresses, or cloud metadata endpoints. Add exceptions in `networkPolicy.egress.extra`. Some CNIs (kindnet in CI is one) do not police traffic from a pod to the API server on its own node, so the missing token, not the NetworkPolicy, is what keeps the agent out of the Kubernetes API.
 - **Sandboxed runtimes.** Set `runtimeClassName` to run the pod under gVisor or Kata Containers.
 
 CI installs the chart in a kind cluster on every pull request and checks each of these, including that dsh's own Landlock sandbox still enforces under the seccomp profile.
