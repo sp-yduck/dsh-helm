@@ -48,7 +48,7 @@ jobs:
 
       - name: Unit tests
         run: |
-          helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.0.3
+          helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.0.3 --verify=false
           helm unittest helm/dsh
 
       # Render the chart with default and feature-rich values and validate the manifests against the Kubernetes schemas.
