@@ -1,0 +1,39 @@
+name: Bug report
+description: The chart or the image does not work as documented.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The commands you ran and the values you changed. Remove secrets.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: chart
+    attributes:
+      label: Chart version
+    validations:
+      required: true
+  - type: input
+    id: dsh
+    attributes:
+      label: dsh version (appVersion or image.tag)
+  - type: input
+    id: k8s
+    attributes:
+      label: Kubernetes distribution and version
+      placeholder: e.g. k3s v1.33, EKS 1.32
+  - type: textarea
+    id: logs
+    attributes:
+      label: Pod logs or events
+      description: Remove login URLs and tokens.
+      render: text
