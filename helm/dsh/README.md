@@ -7,7 +7,7 @@ The chart deploys the DeepSeek Harness Web UI. The [repository README](../../REA
 | Value | Default | Description |
 | --- | --- | --- |
 | `image.repository` | `ghcr.io/sp-yduck/dsh` | Image repository. |
-| `image.tag` | `""` | Image tag. An empty value uses the chart `appVersion`, `0.2.1-rc.5`. |
+| `image.tag` | `""` | Image tag. An empty value uses the chart version; every chart version publishes its own immutable image, which contains the dsh version in `appVersion`. |
 | `image.pullPolicy` | `IfNotPresent` | Image pull policy. |
 | `imagePullSecrets` | `[]` | Pull secrets for a private registry. |
 | `trustedHosts` | `[]` | Hosts that the dsh `/api` host check accepts, as `host` or `host:port`. A host without a port matches any port. The chart adds every `ingress.hosts[].host` when `ingress.enabled` is true. Each entry becomes a `--trusted-host` argument. |

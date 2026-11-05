@@ -50,7 +50,7 @@ To pin a version, add `--version <chart version>`. The [packages page](https://g
 To run the UI on your machine without Kubernetes, run:
 
 ```sh
-docker run --rm -p 3080:3080 ghcr.io/sp-yduck/dsh:0.2.1-rc.5
+docker run --rm -p 3080:3080 ghcr.io/sp-yduck/dsh:latest
 ```
 
 Within about 30 seconds, the log prints a line like this:
@@ -64,7 +64,7 @@ Open that URL as printed. Docker forwards port 3080 to the container, and the re
 The container keeps its data only until you remove it. To keep the data, mount a named volume at `/data`:
 
 ```sh
-docker run --rm -p 3080:3080 -v dsh-data:/data ghcr.io/sp-yduck/dsh:0.2.1-rc.5
+docker run --rm -p 3080:3080 -v dsh-data:/data ghcr.io/sp-yduck/dsh:latest
 ```
 
 ## Install the chart
@@ -232,19 +232,23 @@ The chart uses `ghcr.io/sp-yduck/dsh` by default. Build your own image only to c
 To build the image, run this command from the repository root:
 
 ```sh
-docker build -t <registry>/dsh:0.2.1-rc.5 .
-docker push <registry>/dsh:0.2.1-rc.5
+docker build -t <registry>/dsh:dev .
+docker push <registry>/dsh:dev
 ```
 
-The `DSH_VERSION` build argument selects the npm version. The default is `0.2.1-rc.5`, which is also the chart's `appVersion`. If you build another version, pass the same version to the chart as `image.tag`:
+The `DSH_VERSION` build argument selects the dsh npm version; it defaults to the chart's `appVersion`. Pass your image to the chart with `--set image.repository=<registry>/dsh --set image.tag=dev`.
 
-```sh
-docker build --build-arg DSH_VERSION=0.2.2-rc.1 -t <registry>/dsh:0.2.2-rc.1 .
-```
+## Versions and releases
 
-GitHub Actions (`.github/workflows/image.yaml`) builds the image on every pull request and, on each push to `main`, pushes `ghcr.io/<owner>/dsh:<appVersion>` and `ghcr.io/<owner>/dsh:latest`. The workflow passes the chart's `appVersion` as `DSH_VERSION`, so to release a new dsh version, change `appVersion` in `helm/dsh/Chart.yaml`.
+The chart and the image share one version number:
 
-The same workflow lints and packages the chart, and on each push to `main` pushes it to `oci://ghcr.io/<owner>/charts/dsh`, tagged with the chart's `version`. Bump `version` when you change the chart, because pushing the same version overwrites it. Each new chart version also gets a GitHub Release, tagged `dsh-<version>`, with generated release notes and the packaged chart attached. To install from GHCR, run:
+- `version` in `helm/dsh/Chart.yaml` is the release version. Each release publishes the image `ghcr.io/sp-yduck/dsh:<version>` and the chart `oci://ghcr.io/sp-yduck/charts/dsh:<version>`, and the chart uses that image tag by default. Published tags are never overwritten.
+- `appVersion` is the dsh npm version inside the image.
+- `latest` points to the newest image, for `docker run` only.
+
+[Renovate](https://docs.renovatebot.com/) keeps dsh (npm `next` tag), Node 24, Go, Rust, uv, cloudflared, and the CI tools up to date. An update that changes the image or the chart also raises the patch version, so merging it publishes a new image, chart, and GitHub Release.
+
+CI on `main` (`.github/workflows/image.yaml`) builds the multi-arch image, then pushes the chart to `oci://ghcr.io/<owner>/charts/dsh` and the GitHub Pages repository. Each new chart version also gets a GitHub Release, tagged `dsh-<version>`, with generated release notes and the packaged chart attached. To install from GHCR, run:
 
 ```sh
 helm install dsh oci://ghcr.io/<owner>/charts/dsh --version <version>

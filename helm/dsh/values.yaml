@@ -1,6 +1,7 @@
 image:
   repository: ghcr.io/sp-yduck/dsh
-  tag: ""            # defaults to .Chart.AppVersion
+  # Defaults to the chart version: each chart version has its own immutable image.
+  tag: ""
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 

@@ -15,24 +15,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The image tag follows the chart's appVersion so the chart's default image.tag resolves.
+      # One immutable image per chart version: the chart's default image.tag is its own version,
+      # and appVersion is the dsh npm version baked into the image.
       - id: version
-        run: echo "dsh=$(yq '.appVersion' helm/dsh/Chart.yaml)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "dsh=$(yq '.appVersion' helm/dsh/Chart.yaml)" >> "$GITHUB_OUTPUT"
+          echo "chart=$(yq '.version' helm/dsh/Chart.yaml)" >> "$GITHUB_OUTPUT"
+
+      # Never overwrite a published tag; an image change must come with a new chart version.
+      - id: published
+        if: github.event_name != 'pull_request'
+        run: |
+          tok=$(curl -s -u "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" \
+            "https://ghcr.io/token?scope=repository:${{ github.repository_owner }}/dsh:pull" | jq -r .token)
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $tok" \
+            -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json' \
+            "https://ghcr.io/v2/${{ github.repository_owner }}/dsh/manifests/${{ steps.version.outputs.chart }}")
+          if [ "$code" = 200 ]; then
+            echo "::notice::image ${{ steps.version.outputs.chart }} is already published; skipping"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
 
       # arm64 is emulated, so pull requests build amd64 only to stay fast.
-      - if: github.event_name != 'pull_request'
+      - if: github.event_name != 'pull_request' && steps.published.outputs.exists != 'true'
         uses: docker/setup-qemu-action@v3
 
-      - uses: docker/setup-buildx-action@v3
+      - if: steps.published.outputs.exists != 'true'
+        uses: docker/setup-buildx-action@v3
 
-      - if: github.event_name != 'pull_request'
+      - if: github.event_name != 'pull_request' && steps.published.outputs.exists != 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      - if: steps.published.outputs.exists != 'true'
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
@@ -40,7 +59,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.version.outputs.dsh }}
+            ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.version.outputs.chart }}
             ghcr.io/${{ github.repository_owner }}/dsh:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -50,7 +69,7 @@ jobs:
       - name: Smoke test
         if: github.event_name == 'pull_request'
         env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.version.outputs.dsh }}
+          IMAGE: ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.version.outputs.chart }}
         run: |
           docker run -d --name dsh "$IMAGE"
           for i in $(seq 1 60); do docker logs dsh 2>&1 | grep -q 'token=' && break; sleep 2; done
@@ -69,12 +88,27 @@ jobs:
           check "websocket through relay" "$ws" "HTTP/1.1 101 Switching Protocols"
 
   chart:
+    # Publish the chart only after its image exists, because the chart defaults to that image tag.
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write  # create tags and GitHub Releases
       packages: write
     steps:
       - uses: actions/checkout@v4
+
+      # Point the Artifact Hub image annotation (security report) at this chart's image.
+      - if: github.event_name != 'pull_request'
+        run: |
+          version=$(yq '.version' helm/dsh/Chart.yaml)
+          yq -i ".annotations.\"artifacthub.io/images\" = \"- name: dsh\n  image: ghcr.io/${{ github.repository_owner }}/dsh:$version\n\"" helm/dsh/Chart.yaml
+          yq '.annotations' helm/dsh/Chart.yaml
+
+      - name: dsh version is consistent
+        run: |
+          app=$(yq '.appVersion' helm/dsh/Chart.yaml)
+          arg=$(sed -n 's/^ARG DSH_VERSION=//p' Dockerfile)
+          [ "$app" = "$arg" ] || { echo "::error file=Dockerfile::ARG DSH_VERSION ($arg) must equal appVersion ($app)"; exit 1; }
 
       - run: helm lint --strict helm/dsh && helm package helm/dsh
 
@@ -101,12 +135,13 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: |
           git fetch -q --depth=1 origin "$BASE_REF"
-          git diff --quiet FETCH_HEAD -- helm/dsh && exit 0
+          # The image is versioned with the chart, so image inputs count as chart changes.
+          git diff --quiet FETCH_HEAD -- helm/dsh Dockerfile scripts && exit 0
           base=$(git show FETCH_HEAD:helm/dsh/Chart.yaml | yq '.version')
           head=$(yq '.version' helm/dsh/Chart.yaml)
           newest=$(printf '%s\n%s\n' "$base" "$head" | sort -V | tail -1)
           if [ "$base" = "$head" ] || [ "$newest" != "$head" ]; then
-            echo "::error file=helm/dsh/Chart.yaml::helm/dsh changed, so raise version above $base (now $head)"
+            echo "::error file=helm/dsh/Chart.yaml::the chart or image changed, so raise version above $base (now $head)"
             exit 1
           fi
 
