@@ -1,0 +1,40 @@
+apiVersion: v1
+entries:
+  dsh:
+  - annotations:
+      artifacthub.io/category: ai-machine-learning
+      artifacthub.io/images: |
+        - name: dsh
+          image: ghcr.io/sp-yduck/dsh:0.2.1-rc.5
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: DeepSeek Harness
+          url: https://github.com/deepseek-ai/deepseek-harness
+        - name: Safety notice
+          url: https://github.com/deepseek-ai/deepseek-harness/blob/master/SAFETY.md
+    apiVersion: v2
+    appVersion: 0.2.1-rc.5
+    created: "2026-11-05T04:06:53.812593518Z"
+    description: Run the DeepSeek Harness (dsh) coding-agent Web UI on Kubernetes
+    digest: 8b6b975941808d5ad501532a4bc646c32d37d5854aff6c2fb0569cd29d498315
+    home: https://github.com/sp-yduck/dsh-helm
+    keywords:
+    - dsh
+    - deepseek
+    - deepseek-harness
+    - ai-agent
+    - coding-agent
+    - llm
+    kubeVersion: '>=1.23.0-0'
+    maintainers:
+    - name: sp-yduck
+      url: https://github.com/sp-yduck
+    name: dsh
+    sources:
+    - https://github.com/sp-yduck/dsh-helm
+    - https://github.com/deepseek-ai/deepseek-harness
+    type: application
+    urls:
+    - https://github.com/sp-yduck/dsh-helm/releases/download/dsh-0.2.2/dsh-0.2.2.tgz
+    version: 0.2.2
+generated: "2026-11-05T04:06:53.81207234Z"
