@@ -44,7 +44,7 @@ The chart deploys the DeepSeek Harness Web UI. The [repository README](../../REA
 The chart sets these values and does not expose them:
 
 - One replica with the `Recreate` update strategy.
-- `DSH_HOST` set to the pod IP, because dsh rejects wildcard bind addresses.
+- `DSH_HOST` set to the pod IP. The image serves dsh on `127.0.0.1` and relays the pod IP to it, because dsh rejects wildcard bind addresses. `kubectl port-forward` reaches dsh directly on loopback.
 - `DSH_PORT` set to `3080`.
 - `fsGroup: 1000`, so the `node` user in the image can write to the volume.
 - `fsGroupChangePolicy: OnRootMismatch`. dsh exits when `.credentials.yaml` is readable by its group, and a recursive `fsGroup` change on each mount would make it so.

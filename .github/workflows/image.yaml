@@ -38,11 +38,35 @@ jobs:
           platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           build-args: DSH_VERSION=${{ steps.version.outputs.dsh }}
           push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.version.outputs.dsh }}
             ghcr.io/${{ github.repository_owner }}/dsh:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Start the image and check the auth boundary through both paths: the relay on the
+      # container IP (Service/Ingress) and loopback (kubectl port-forward).
+      - name: Smoke test
+        if: github.event_name == 'pull_request'
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.version.outputs.dsh }}
+        run: |
+          docker run -d --name dsh "$IMAGE"
+          for i in $(seq 1 60); do docker logs dsh 2>&1 | grep -q 'token=' && break; sleep 2; done
+          docker logs dsh 2>&1 | grep -E 'dsh-relay|dsh web' | sed -E 's/token=[^ ]+/token=<redacted>/'
+          ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' dsh)
+          token=$(docker logs dsh 2>&1 | grep -oE 'token=[A-Za-z0-9_-]+' | head -1 | cut -d= -f2)
+          check() { [ "$2" = "$3" ] || { echo "::error::$1: expected $3, got $2"; exit 1; }; echo "ok: $1 -> $2"; }
+          check "relay without token" "$(curl -s -o /dev/null -w '%{http_code}' "http://$ip:3080/")" 401
+          check "relay with token" "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: localhost:3080' "http://$ip:3080/?token=$token")" 303
+          check "loopback with token" "$(docker exec dsh curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3080/?token=$token")" 303
+          curl -s -c jar -o /dev/null -H 'Host: localhost:3080' "http://$ip:3080/?token=$token"
+          check "untrusted Host on /api" "$(curl -s -b jar -o /dev/null -w '%{http_code}' -H 'Host: evil.example' "http://$ip:3080/api/settings")" 403
+          ws=$(curl -s -i -N -b jar -m 3 -H 'Host: localhost:3080' -H 'Origin: http://localhost:3080' \
+            -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' \
+            -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' "http://$ip:3080/api/remote.mux" | head -1 | tr -d '\r' || true)
+          check "websocket through relay" "$ws" "HTTP/1.1 101 Switching Protocols"
 
   chart:
     runs-on: ubuntu-latest
