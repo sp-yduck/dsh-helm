@@ -27,9 +27,17 @@ The chart deploys the DeepSeek Harness Web UI. The [repository README](../../REA
 | `persistence.storageClass` | `""` | Storage class of the claim that the chart creates. An empty value uses the cluster default. |
 | `persistence.existingClaim` | `""` | Name of a claim to mount instead of creating one. `helm uninstall` does not delete it. |
 | `resources` | `{}` | Container resource requests and limits. |
+| `podAnnotations` | `{}` | Extra annotations on the pod. |
+| `podLabels` | `{}` | Extra labels on the pod. |
+| `extraVolumes` | `[]` | Extra pod volumes, in Kubernetes `volumes` format. |
+| `extraVolumeMounts` | `[]` | Extra mounts for the dsh container, in Kubernetes `volumeMounts` format. |
 | `nodeSelector` | `{}` | Pod node selector. |
 | `tolerations` | `[]` | Pod tolerations. |
 | `affinity` | `{}` | Pod affinity. |
+
+## Validation
+
+`values.schema.json` validates the values on `helm install`, `helm upgrade`, `helm template`, and `helm lint`. A misspelled or unknown top-level key, such as `ingres`, fails instead of being ignored.
 
 ## Fixed settings
 

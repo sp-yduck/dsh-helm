@@ -1,6 +1,31 @@
 apiVersion: v2
 name: dsh
-description: DeepSeek Harness (dsh) Web UI
+description: Run the DeepSeek Harness (dsh) coding-agent Web UI on Kubernetes
 type: application
-version: 0.1.2
+version: 0.2.0
 appVersion: "0.2.1-rc.5"
+kubeVersion: ">=1.23.0-0"
+home: https://github.com/sp-yduck/dsh-helm
+sources:
+  - https://github.com/sp-yduck/dsh-helm
+  - https://github.com/deepseek-ai/deepseek-harness
+keywords:
+  - dsh
+  - deepseek
+  - deepseek-harness
+  - ai-agent
+  - coding-agent
+  - llm
+maintainers:
+  - name: sp-yduck
+    url: https://github.com/sp-yduck
+annotations:
+  artifacthub.io/category: ai-machine-learning
+  artifacthub.io/links: |
+    - name: DeepSeek Harness
+      url: https://github.com/deepseek-ai/deepseek-harness
+    - name: Safety notice
+      url: https://github.com/deepseek-ai/deepseek-harness/blob/master/SAFETY.md
+  artifacthub.io/images: |
+    - name: dsh
+      image: ghcr.io/sp-yduck/dsh:0.2.1-rc.5
