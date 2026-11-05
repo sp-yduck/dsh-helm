@@ -128,6 +128,16 @@ jobs:
           done
           exit 1
 
+      # Artifact Hub reads repository metadata from the special artifacthub.io tag.
+      - if: github.event_name != 'pull_request'
+        uses: oras-project/setup-oras@v1
+      - if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+          oras push "ghcr.io/${{ github.repository_owner }}/charts/dsh:artifacthub.io" \
+            --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+            artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
+
       # One GitHub Release per chart version, tagged dsh-<version>, with generated notes and the packaged chart.
       - if: github.event_name != 'pull_request'
         env:
@@ -158,6 +168,12 @@ jobs:
             git worktree add -q --detach site
             git -C site checkout -q --orphan gh-pages
             git -C site rm -rqf .
+          fi
+          if ! cmp -s artifacthub-repo.yml site/artifacthub-repo.yml; then
+            cp artifacthub-repo.yml site/artifacthub-repo.yml
+            git -C site add artifacthub-repo.yml
+            git -C site commit -q -m "artifacthub-repo.yml"
+            git -C site push -q origin gh-pages
           fi
           if [ -f site/index.yaml ] && yq -e ".entries.dsh[] | select(.version == \"$version\")" site/index.yaml >/dev/null 2>&1; then
             echo "::notice::index.yaml already lists $version; skipping"
