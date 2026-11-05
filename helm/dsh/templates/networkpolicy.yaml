@@ -1,0 +1,40 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "dsh.fullname" . }}
+  labels: {{- include "dsh.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- include "dsh.selectorLabels" . | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Only the UI port is reachable, from the listed peers or, when none are listed, from anywhere.
+    - ports:
+        - port: http
+          protocol: TCP
+      {{- with .Values.networkPolicy.ingressFrom }}
+      from: {{- toYaml . | nindent 8 }}
+      {{- end }}
+  egress:
+    # DNS, wherever the cluster resolver runs.
+    - ports:
+        - { port: 53, protocol: UDP }
+        - { port: 53, protocol: TCP }
+    {{- if .Values.networkPolicy.egress.blockPrivateNetworks }}
+    # The internet (model APIs, git hosts, package registries) but not the cluster network,
+    # the node network, or cloud metadata endpoints.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: {{- toYaml .Values.networkPolicy.egress.privateIPv4 | nindent 14 }}
+        - ipBlock:
+            cidr: ::/0
+            except: {{- toYaml .Values.networkPolicy.egress.privateIPv6 | nindent 14 }}
+    {{- else }}
+    - {}
+    {{- end }}
+    {{- with .Values.networkPolicy.egress.extra }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

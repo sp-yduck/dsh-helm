@@ -10,3 +10,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
+{{- define "dsh.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}{{ .Values.serviceAccount.name | default (include "dsh.fullname" .) }}{{ else }}{{ .Values.serviceAccount.name | default "default" }}{{ end }}
+{{- end }}

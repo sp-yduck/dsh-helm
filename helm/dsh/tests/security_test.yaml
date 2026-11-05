@@ -1,0 +1,61 @@
+suite: security
+tests:
+  - it: gives the pod no Kubernetes API token by default
+    template: templates/deployment.yaml
+    asserts:
+      - equal: { path: spec.template.spec.automountServiceAccountToken, value: false }
+      - equal: { path: spec.template.spec.serviceAccountName, value: RELEASE-NAME-dsh }
+  - it: creates a dedicated ServiceAccount without a token
+    template: templates/serviceaccount.yaml
+    asserts:
+      - equal: { path: automountServiceAccountToken, value: false }
+  - it: uses an existing ServiceAccount when create is false
+    template: templates/deployment.yaml
+    set: { serviceAccount.create: false, serviceAccount.name: mine }
+    asserts:
+      - equal: { path: spec.template.spec.serviceAccountName, value: mine }
+  - it: runs as non-root with RuntimeDefault seccomp
+    template: templates/deployment.yaml
+    asserts:
+      - equal: { path: spec.template.spec.securityContext.runAsNonRoot, value: true }
+      - equal: { path: spec.template.spec.securityContext.runAsUser, value: 1000 }
+      - equal: { path: spec.template.spec.securityContext.seccompProfile.type, value: RuntimeDefault }
+      - equal: { path: "spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation", value: false }
+      - contains: { path: "spec.template.spec.containers[0].securityContext.capabilities.drop", content: ALL }
+  - it: limits the root init container to CHOWN
+    template: templates/deployment.yaml
+    asserts:
+      - equal: { path: "spec.template.spec.initContainers[0].securityContext.capabilities.add", value: [CHOWN] }
+      - equal: { path: "spec.template.spec.initContainers[0].securityContext.allowPrivilegeEscalation", value: false }
+  - it: sets runtimeClassName and priorityClassName
+    template: templates/deployment.yaml
+    set: { runtimeClassName: gvisor, priorityClassName: high }
+    asserts:
+      - equal: { path: spec.template.spec.runtimeClassName, value: gvisor }
+      - equal: { path: spec.template.spec.priorityClassName, value: high }
+  - it: omits runtimeClassName by default
+    template: templates/deployment.yaml
+    asserts:
+      - notExists: { path: spec.template.spec.runtimeClassName }
+  - it: creates a NetworkPolicy that blocks private egress by default
+    template: templates/networkpolicy.yaml
+    asserts:
+      - equal: { path: spec.policyTypes, value: [Ingress, Egress] }
+      - notExists: { path: "spec.ingress[0].from" }
+      - contains: { path: "spec.egress[1].to[0].ipBlock.except", content: 169.254.0.0/16 }
+      - contains: { path: "spec.egress[1].to[0].ipBlock.except", content: 10.0.0.0/8 }
+  - it: restricts ingress peers and opens egress when asked
+    template: templates/networkpolicy.yaml
+    set:
+      networkPolicy.ingressFrom: [{ namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ingress-nginx } } }]
+      networkPolicy.egress.blockPrivateNetworks: false
+      networkPolicy.egress.extra: [{ to: [{ ipBlock: { cidr: 10.0.0.5/32 } }] }]
+    asserts:
+      - equal: { path: "spec.ingress[0].from[0].namespaceSelector.matchLabels[\"kubernetes.io/metadata.name\"]", value: ingress-nginx }
+      - equal: { path: "spec.egress[1]", value: {} }
+      - equal: { path: "spec.egress[2].to[0].ipBlock.cidr", value: 10.0.0.5/32 }
+  - it: skips the NetworkPolicy when disabled
+    template: templates/networkpolicy.yaml
+    set: { networkPolicy.enabled: false }
+    asserts:
+      - hasDocuments: { count: 0 }

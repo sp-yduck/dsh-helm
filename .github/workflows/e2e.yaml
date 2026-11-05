@@ -1,0 +1,98 @@
+name: e2e
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  kind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: dsh:e2e
+          cache-from: type=gha
+
+      # kindnet enforces NetworkPolicy, so the egress checks below are real.
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: e2e
+
+      - name: Install the chart
+        run: |
+          kind load docker-image dsh:e2e --name e2e
+          helm install dsh helm/dsh --wait --timeout 5m \
+            --set image.repository=dsh --set image.tag=e2e --set image.pullPolicy=Never \
+            --set 'trustedHosts[0]=dsh.example.com'
+          kubectl get pods -o wide
+
+      - name: Check the pod hardening
+        run: |
+          set -x
+          mustfail() { if "$@"; then echo "::error::expected failure: $*"; exit 1; fi; }
+          kubectl exec deploy/dsh -- id -u | grep -qx 1000
+          kubectl exec deploy/dsh -- sh -c 'grep -E "^(NoNewPrivs|Seccomp):" /proc/self/status'
+          kubectl exec deploy/dsh -- sh -c 'grep -q "^Seccomp:[[:space:]]*2" /proc/self/status'
+          kubectl exec deploy/dsh -- sh -c 'grep -q "^CapEff:[[:space:]]*0000000000000000" /proc/self/status'
+          mustfail kubectl exec deploy/dsh -- test -e /var/run/secrets/kubernetes.io/serviceaccount/token
+          kubectl exec deploy/dsh -- sh -c 'touch /data/workspace/.e2e && rm /data/workspace/.e2e'
+
+      # dsh runs agent shell commands through landlock-run; it must still enforce under RuntimeDefault seccomp.
+      - name: Check the dsh sandbox
+        run: |
+          set -x
+          mustfail() { if "$@"; then echo "::error::expected failure: $*"; exit 1; fi; }
+          ll=$(kubectl exec deploy/dsh -- sh -c 'ls /usr/local/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/node-addon-system-linux-*/bin/landlock-run | head -1')
+          kubectl exec deploy/dsh -- "$ll" --probe
+          kubectl exec deploy/dsh -- "$ll" --rw /data/workspace --ro / -- sh -c 'touch /data/workspace/.sandbox && rm /data/workspace/.sandbox'
+          mustfail kubectl exec deploy/dsh -- "$ll" --rw /data/workspace --ro / -- sh -c 'touch /tmp/.outside'
+
+      - name: Check access through port-forward
+        run: |
+          kubectl port-forward deploy/dsh 3080:3080 >/dev/null 2>&1 &
+          sleep 3
+          token=$(kubectl logs deploy/dsh | grep -oE 'token=[A-Za-z0-9_-]+' | head -1 | cut -d= -f2)
+          check() { [ "$2" = "$3" ] || { echo "::error::$1: expected $3, got $2"; exit 1; }; echo "ok: $1 -> $2"; }
+          check "port-forward without token" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3080/)" 401
+          check "port-forward with token" "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3080/?token=$token")" 303
+
+      # An Ingress controller, Tailscale proxy, or cloudflared reaches dsh through the Service with the public Host.
+      - name: Check access through the Service
+        run: |
+          token=$(kubectl logs deploy/dsh | grep -oE 'token=[A-Za-z0-9_-]+' | head -1 | cut -d= -f2)
+          code=$(kubectl run svc-check --rm -i --restart=Never --image=curlimages/curl:8.17.0 -- \
+            curl -s -o /dev/null -w 'status=%{http_code}\n' -H 'Host: dsh.example.com' "http://dsh:3080/?token=$token" \
+            | grep -oE 'status=[0-9]{3}' | cut -d= -f2)
+          [ "$code" = 303 ] || { echo "::error::Service with trusted Host: expected 303, got $code"; exit 1; }
+          echo "ok: Service with trusted Host -> $code"
+
+      - name: Check the NetworkPolicy
+        run: |
+          set -x
+          mustfail() { if "$@"; then echo "::error::expected failure: $*"; exit 1; fi; }
+          kubectl exec deploy/dsh -- curl -sS -o /dev/null -m 10 https://github.com
+          # Pod-to-pod traffic inside the cluster network is blocked (CoreDNS health port).
+          dns=$(kubectl -n kube-system get pod -l k8s-app=kube-dns -o jsonpath='{.items[0].status.podIP}')
+          kubectl run np-control --rm -i --restart=Never --image=curlimages/curl:8.17.0 -- curl -s -m 5 "http://$dns:8080/health"
+          mustfail kubectl exec deploy/dsh -- curl -s -o /dev/null -m 5 "http://$dns:8080/health"
+          # Some CNIs do not police traffic to the API server on the pod's own node; report it, the pod has no token anyway.
+          if kubectl exec deploy/dsh -- curl -sk -o /dev/null -m 5 https://kubernetes.default.svc; then
+            echo "::warning::the Kubernetes API is reachable from the pod despite the NetworkPolicy (CNI does not police node-local traffic)"
+          fi
+          mustfail kubectl exec deploy/dsh -- curl -s -o /dev/null -m 5 http://169.254.169.254/
+
+      - if: failure()
+        run: |
+          kubectl describe pod -l app.kubernetes.io/name=dsh
+          kubectl logs deploy/dsh --all-containers | sed -E 's/token=[^ ]+/token=<redacted>/' | tail -50
