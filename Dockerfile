@@ -41,6 +41,9 @@ USER node
 WORKDIR /data/workspace
 EXPOSE 3080
 
-# dsh rejects wildcard bind addresses, so bind the pod/container IP (DSH_HOST),
-# falling back to the container's first address.
-ENTRYPOINT ["tini", "--", "sh", "-c", "exec dsh --profile web --no-open --host \"${DSH_HOST:-$(hostname -i | cut -d' ' -f1)}\" --port \"${DSH_PORT:-3080}\" \"$@\"", "dsh"]
+COPY --chmod=0755 scripts/entrypoint.sh /usr/local/bin/dsh-entrypoint
+COPY --chmod=0644 scripts/dsh-relay.mjs /usr/local/lib/dsh-relay.mjs
+
+# dsh listens on loopback (so kubectl port-forward works) and a TCP relay publishes it
+# on the pod/container IP (DSH_HOST), because dsh rejects wildcard bind addresses.
+ENTRYPOINT ["tini", "--", "dsh-entrypoint"]

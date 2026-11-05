@@ -59,7 +59,7 @@ spec:
             - {{ . | quote }}
             {{- end }}
           env:
-            # dsh rejects wildcard binds, so listen on the pod IP.
+            # The image serves dsh on loopback and relays this address (the pod IP) to it.
             - name: DSH_HOST
               valueFrom:
                 fieldRef:

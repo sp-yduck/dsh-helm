@@ -19,10 +19,11 @@ Run the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`ds
 
 ```sh
 helm install dsh oci://ghcr.io/sp-yduck/charts/dsh
+kubectl port-forward deploy/dsh 3080:3080 &
 kubectl logs deploy/dsh -f | grep -m1 token=
 ```
 
-The log prints a login URL with the pod IP. dsh listens only on the pod IP, so `kubectl port-forward` does not work; open the UI through an Ingress (see [Install the chart](#install-the-chart)) or from inside the cluster network. Then add a model API key under **Settings → Models**.
+Open the printed `http://127.0.0.1:3080/?token=...` URL, then add a model API key under **Settings → Models**. To use the UI from other machines, put it behind an Ingress with TLS (see [Install the chart](#install-the-chart)).
 
 If your tooling does not support OCI charts, use the classic Helm repository instead:
 
@@ -51,10 +52,10 @@ docker run --rm -p 3080:3080 ghcr.io/sp-yduck/dsh:0.2.1-rc.5
 Within about 30 seconds, the log prints a line like this:
 
 ```text
-dsh web: http://172.17.0.2:3080/?token=6lcl9cb0hW6MX680ToAWcBiTYY7JoU1zPVe9Et1qs3g
+dsh web: http://127.0.0.1:3080/?token=6lcl9cb0hW6MX680ToAWcBiTYY7JoU1zPVe9Et1qs3g
 ```
 
-Replace the container address with `localhost` and open `http://localhost:3080/?token=<token>`.
+Open that URL as printed. Docker forwards port 3080 to the container, and the relay passes it to dsh.
 
 The container keeps its data only until you remove it. To keep the data, mount a named volume at `/data`:
 
@@ -112,7 +113,7 @@ dsh prints a login URL with a new token each time it starts. To get the URL, run
 kubectl logs deploy/dsh | grep token=
 ```
 
-Open the URL in a browser. dsh exchanges the token for a signed session cookie and removes the token from the address bar. If `publicUrl` is empty, the URL shows the pod IP. In that case, replace the address with the one that your browser uses.
+Open the URL in a browser. dsh exchanges the token for a signed session cookie and removes the token from the address bar. If `publicUrl` is empty, the URL shows `127.0.0.1:3080`, which works as is through `kubectl port-forward deploy/dsh 3080:3080`. Through an Ingress, replace the address with your Ingress host, or set `publicUrl`.
 
 The URL is a credential. Share it only with people who may use the agent.
 
@@ -154,10 +155,9 @@ Helm deletes the PersistentVolumeClaim that the chart created, and with it all s
 
 ## Know the limits
 
-dsh does not accept a wildcard bind address such as `0.0.0.0`. The chart therefore starts dsh on the pod IP. This choice has two effects:
+dsh does not accept a wildcard bind address such as `0.0.0.0`. The image therefore starts dsh on `127.0.0.1:3080`, which `kubectl port-forward` reaches, and a small TCP relay ([`scripts/dsh-relay.mjs`](scripts/dsh-relay.mjs)) publishes it on the pod IP for the Service and the Ingress. The relay copies bytes and does not parse HTTP, so dsh still checks the launch token, the session cookie, and the `Host` and `Origin` headers on every request.
 
-- `kubectl port-forward` does not reach the UI. Port forwarding connects to the pod's loopback address, and dsh does not listen there. Use the Service or the Ingress.
-- dsh rejects an `/api` request with 403 when the `Host` header is not loopback, the pod IP, or a host in `trustedHosts` or `ingress.hosts`. If you open the UI by any other name, such as a Service DNS name or a NodePort address, add that name to `trustedHosts`.
+dsh rejects an `/api` request with 403 when the `Host` header is not loopback or a host in `trustedHosts` or `ingress.hosts`. If you open the UI by any other name, such as a Service DNS name or a NodePort address, add that name to `trustedHosts`.
 
 The pod serves plain HTTP. Terminate TLS at the Ingress, and allow traffic to port 3080 only from the Ingress controller or another network that you trust.
 
