@@ -2,13 +2,36 @@
 # full pnpm/native toolchain and is not required to serve the Web UI.
 FROM node:24-bookworm-slim
 
-ARG DSH_VERSION=0.2.1-rc.5
-
-# git/bash/ca-certificates: tools the agent's shell commands expect to find.
+# Toolchain for coding tasks. The agent runs as "node" and cannot apt-get at runtime.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git ca-certificates tini \
+ && apt-get install -y --no-install-recommends \
+      git ca-certificates tini curl wget gnupg openssh-client \
+      ripgrep fd-find jq less file tree unzip zip xz-utils patch diffutils procps \
+      build-essential pkg-config python3 python3-venv python3-pip \
+ && ln -s /usr/bin/fdfind /usr/local/bin/fd \
+ && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
+ && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends gh \
  && rm -rf /var/lib/apt/lists/* \
- && npm install -g "@deepseek-ai/dsh@${DSH_VERSION}" \
+ && corepack enable
+
+COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /uvx /usr/local/bin/
+
+ARG GO_VERSION=1.27.3
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-$(dpkg --print-architecture).tar.gz" | tar -xz -C /usr/local
+
+# Owned by node so the agent can add toolchains/targets and cargo install.
+ARG RUST_VERSION=1.99.1
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo
+RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal \
+      --default-toolchain "${RUST_VERSION}" --component clippy,rustfmt \
+ && chown -R node:node "$RUSTUP_HOME" "$CARGO_HOME"
+ENV PATH=/usr/local/cargo/bin:/usr/local/go/bin:/data/go/bin:$PATH
+
+ARG DSH_VERSION=0.2.1-rc.5
+RUN npm install -g "@deepseek-ai/dsh@${DSH_VERSION}" \
  && npm cache clean --force
 
 ENV DSH_HOME=/data/.dsh \
