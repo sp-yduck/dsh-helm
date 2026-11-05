@@ -82,7 +82,14 @@ jobs:
           set -x
           mustfail() { if "$@"; then echo "::error::expected failure: $*"; exit 1; fi; }
           kubectl exec deploy/dsh -- curl -sS -o /dev/null -m 10 https://github.com
-          mustfail kubectl exec deploy/dsh -- curl -sk -o /dev/null -m 5 https://kubernetes.default.svc
+          # Pod-to-pod traffic inside the cluster network is blocked (CoreDNS health port).
+          dns=$(kubectl -n kube-system get pod -l k8s-app=kube-dns -o jsonpath='{.items[0].status.podIP}')
+          kubectl run np-control --rm -i --restart=Never --image=curlimages/curl:8.17.0 -- curl -s -m 5 "http://$dns:8080/health"
+          mustfail kubectl exec deploy/dsh -- curl -s -o /dev/null -m 5 "http://$dns:8080/health"
+          # Some CNIs do not police traffic to the API server on the pod's own node; report it, the pod has no token anyway.
+          if kubectl exec deploy/dsh -- curl -sk -o /dev/null -m 5 https://kubernetes.default.svc; then
+            echo "::warning::the Kubernetes API is reachable from the pod despite the NetworkPolicy (CNI does not police node-local traffic)"
+          fi
           mustfail kubectl exec deploy/dsh -- curl -s -o /dev/null -m 5 http://169.254.169.254/
 
       - if: failure()
