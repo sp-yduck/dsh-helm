@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/sp-yduck/dsh-helm/actions/workflows/image.yaml/badge.svg?branch=main)](https://github.com/sp-yduck/dsh-helm/actions/workflows/image.yaml)
 [![Chart](https://img.shields.io/badge/chart-oci%3A%2F%2Fghcr.io%2Fsp--yduck%2Fcharts%2Fdsh-0f1689?logo=helm)](https://github.com/sp-yduck/dsh-helm/pkgs/container/charts%2Fdsh)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Image](https://img.shields.io/badge/image-ghcr.io%2Fsp--yduck%2Fdsh-2496ed?logo=docker&logoColor=white)](https://github.com/sp-yduck/dsh-helm/pkgs/container/dsh)
 
 Run the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) coding-agent Web UI on Kubernetes with one `helm install`.
@@ -187,3 +188,7 @@ helm install dsh oci://ghcr.io/<owner>/charts/dsh --version <version>
 
 - `Dockerfile` builds the image from `node:24-bookworm-slim` and runs as the `node` user (UID 1000) with `HOME=/data`. For coding tasks it adds `git`, `gh`, `ripgrep`, `fd`, `jq`, `curl`, `build-essential`, Python 3 with `uv`, Go, Rust (with `clippy` and `rustfmt`), and pnpm/yarn through corepack. The `GO_VERSION` and `RUST_VERSION` build arguments set those versions. The image is about 3.4 GB.
 - `helm/dsh/` is the chart. It creates a Deployment, a Service, a PersistentVolumeClaim, and an optional Ingress. An init container gives `/data/workspace` to the `node` user, because storage that ignores `fsGroup` would otherwise leave it owned by root.
+
+## License
+
+[MIT](LICENSE). dsh itself is developed upstream by DeepSeek under its own license.

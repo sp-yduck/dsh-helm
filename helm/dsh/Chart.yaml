@@ -2,7 +2,7 @@ apiVersion: v2
 name: dsh
 description: Run the DeepSeek Harness (dsh) coding-agent Web UI on Kubernetes
 type: application
-version: 0.2.1
+version: 0.2.2
 appVersion: "0.2.1-rc.5"
 kubeVersion: ">=1.23.0-0"
 home: https://github.com/sp-yduck/dsh-helm
@@ -21,6 +21,7 @@ maintainers:
     url: https://github.com/sp-yduck
 annotations:
   artifacthub.io/category: ai-machine-learning
+  artifacthub.io/license: MIT
   artifacthub.io/links: |
     - name: DeepSeek Harness
       url: https://github.com/deepseek-ai/deepseek-harness
