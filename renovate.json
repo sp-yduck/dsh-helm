@@ -1,0 +1,83 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits"],
+  "labels": ["dependencies"],
+  "bumpVersions": [
+    {
+      "name": "chart version",
+      "filePatterns": ["helm/dsh/Chart.yaml"],
+      "matchStrings": ["(?m)^version:\\s*(?<version>\\S+)$"],
+      "bumpType": "patch"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "dsh version: Dockerfile build arg and chart appVersion move together",
+      "managerFilePatterns": ["/^Dockerfile$/", "/^helm/dsh/Chart\\.yaml$/"],
+      "matchStrings": ["ARG DSH_VERSION=(?<currentValue>\\S+)", "appVersion:\\s*\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "@deepseek-ai/dsh",
+      "datasourceTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "description": "Go toolchain in the image",
+      "managerFilePatterns": ["/^Dockerfile$/"],
+      "matchStrings": ["ARG GO_VERSION=(?<currentValue>\\S+)"],
+      "depNameTemplate": "go",
+      "datasourceTemplate": "golang-version"
+    },
+    {
+      "customType": "regex",
+      "description": "Rust toolchain in the image",
+      "managerFilePatterns": ["/^Dockerfile$/"],
+      "matchStrings": ["ARG RUST_VERSION=(?<currentValue>\\S+)"],
+      "depNameTemplate": "rust-lang/rust",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
+      "description": "cloudflared image in chart values",
+      "managerFilePatterns": ["/^helm/dsh/values\\.yaml$/"],
+      "matchStrings": ["repository: (?<depName>cloudflare/cloudflared)\\s+tag: \"(?<currentValue>[^\"]+)\""],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Pinned tool versions in workflows",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "github\\.com/(?<depName>yannh/kubeconform)/releases/download/(?<currentValue>v[^/]+)/",
+        "github\\.com/(?<depName>helm-unittest/helm-unittest) --version (?<currentValue>v\\S+)"
+      ],
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
+      "description": "Test images in workflows",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": ["--image=(?<depName>curlimages/curl):(?<currentValue>[^\\s]+)"],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "dsh ships release candidates on the npm 'next' tag; follow it, not 'latest' or alpha",
+      "matchPackageNames": ["@deepseek-ai/dsh"],
+      "followTag": "next",
+      "commitMessageTopic": "dsh",
+      "labels": ["dependencies", "dsh"]
+    },
+    {
+      "description": "Keep the image on Node 24 (dsh requires Node >= 24.9)",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["node"],
+      "allowedVersions": "<25"
+    },
+    {
+      "description": "Bundle GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    }
+  ]
+}
