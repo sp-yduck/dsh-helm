@@ -72,7 +72,8 @@ jobs:
         run: |
           token=$(kubectl logs deploy/dsh | grep -oE 'token=[A-Za-z0-9_-]+' | head -1 | cut -d= -f2)
           code=$(kubectl run svc-check --rm -i --restart=Never --image=curlimages/curl:8.17.0 -- \
-            curl -s -o /dev/null -w '%{http_code}' -H 'Host: dsh.example.com' "http://dsh:3080/?token=$token" | tail -1)
+            curl -s -o /dev/null -w 'status=%{http_code}\n' -H 'Host: dsh.example.com' "http://dsh:3080/?token=$token" \
+            | grep -oE 'status=[0-9]{3}' | cut -d= -f2)
           [ "$code" = 303 ] || { echo "::error::Service with trusted Host: expected 303, got $code"; exit 1; }
           echo "ok: Service with trusted Host -> $code"
 
