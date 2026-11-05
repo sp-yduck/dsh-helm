@@ -14,7 +14,7 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- if .Values.serviceAccount.create }}{{ .Values.serviceAccount.name | default (include "dsh.fullname" .) }}{{ else }}{{ .Values.serviceAccount.name | default "default" }}{{ end }}
 {{- end }}
 {{- define "dsh.image" -}}
-{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.Version }}
 {{- end }}
 {{- define "dsh.tailscaleFQDN" -}}
 {{- if and .Values.tailscale.enabled .Values.tailscale.tailnet }}{{ printf "%s.%s" .Values.tailscale.hostname .Values.tailscale.tailnet }}{{ end }}
