@@ -22,6 +22,8 @@ Report security problems privately as described in [SECURITY.md](SECURITY.md), n
    helm template dsh helm/dsh | kubeconform -strict -summary
    ```
 
+CI also installs the chart in a kind cluster (`.github/workflows/e2e.yaml`) and checks access, pod hardening, the dsh sandbox, and the NetworkPolicy.
+
 ## Change the image
 
 To build the image locally, run `docker build -t dsh:dev .`. To release a new dsh version, change `appVersion` in `helm/dsh/Chart.yaml`. CI passes it to the build as `DSH_VERSION`, and the chart uses it as the default image tag. Because the chart changes, also raise the chart `version`.

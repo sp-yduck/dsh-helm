@@ -36,6 +36,46 @@ persistence:
 
 resources: {}
 
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  # The agent runs arbitrary shell commands, so it gets no Kubernetes API token by default.
+  automountServiceAccountToken: false
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: [ALL]
+  # The agent installs toolchains and caches under /usr/local and /tmp, so the root filesystem stays writable.
+  readOnlyRootFilesystem: false
+
+# e.g. gvisor or kata for a VM/sandbox runtime around the agent.
+runtimeClassName: ""
+priorityClassName: ""
+
+networkPolicy:
+  enabled: true
+  # Peers allowed to reach the UI port, in NetworkPolicy "from" format. Empty allows any source,
+  # which keeps Ingress controllers, Tailscale proxies, and cloudflared working out of the box.
+  ingressFrom: []
+  egress:
+    # Allow the internet but not cluster, node, or cloud-metadata addresses. DNS is always allowed.
+    blockPrivateNetworks: true
+    privateIPv4: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16, 127.0.0.0/8]
+    privateIPv6: ["fc00::/7", "fe80::/10", "::1/128"]
+    # More egress rules, e.g. an in-cluster model gateway.
+    extra: []
+
 # Extra metadata on the pod template.
 podAnnotations: {}
 podLabels: {}

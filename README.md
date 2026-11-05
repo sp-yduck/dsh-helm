@@ -157,6 +157,17 @@ helm uninstall dsh
 
 Helm deletes the PersistentVolumeClaim that the chart created, and with it all settings, keys, and sessions. To keep the data, create a claim yourself and set `persistence.existingClaim` before you install.
 
+## Security defaults
+
+The chart assumes that whoever logs in can run any command in the pod, and limits what that command can reach:
+
+- **No Kubernetes API token.** The pod uses its own ServiceAccount with `automountServiceAccountToken: false`.
+- **Non-root, no capabilities.** dsh runs as UID 1000 with all capabilities dropped, no privilege escalation, and the `RuntimeDefault` seccomp profile. The only root step is an init container that may `chown` the workspace directory.
+- **NetworkPolicy.** Only port 3080 accepts traffic. Egress reaches DNS and the internet, but not the cluster network, the Kubernetes API, node addresses, or cloud metadata endpoints. Add exceptions in `networkPolicy.egress.extra`.
+- **Sandboxed runtimes.** Set `runtimeClassName` to run the pod under gVisor or Kata Containers.
+
+CI installs the chart in a kind cluster on every pull request and checks each of these, including that dsh's own Landlock sandbox still enforces under the seccomp profile.
+
 ## Know the limits
 
 dsh does not accept a wildcard bind address such as `0.0.0.0`. The image therefore starts dsh on `127.0.0.1:3080`, which `kubectl port-forward` reaches, and a small TCP relay ([`scripts/dsh-relay.mjs`](scripts/dsh-relay.mjs)) publishes it on the pod IP for the Service and the Ingress. The relay copies bytes and does not parse HTTP, so dsh still checks the launch token, the session cookie, and the `Host` and `Origin` headers on every request.

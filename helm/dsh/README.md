@@ -31,6 +31,19 @@ The chart deploys the DeepSeek Harness Web UI. The [repository README](../../REA
 | `podLabels` | `{}` | Extra labels on the pod. |
 | `extraVolumes` | `[]` | Extra pod volumes, in Kubernetes `volumes` format. |
 | `extraVolumeMounts` | `[]` | Extra mounts for the dsh container, in Kubernetes `volumeMounts` format. |
+| `serviceAccount.create` | `true` | Creates a ServiceAccount for the pod. |
+| `serviceAccount.name` | `""` | ServiceAccount name. Defaults to the release full name, or `default` when `create` is false. |
+| `serviceAccount.annotations` | `{}` | ServiceAccount annotations, such as a cloud workload identity. |
+| `serviceAccount.automountServiceAccountToken` | `false` | Mounts a Kubernetes API token into the pod. The agent can read anything the pod can, so leave this off unless the agent must call the API. |
+| `podSecurityContext` | non-root UID/GID 1000, `fsGroup` 1000, `RuntimeDefault` seccomp | Pod security context. |
+| `securityContext` | no privilege escalation, all capabilities dropped | Container security context. The root filesystem stays writable because the agent installs toolchains under `/usr/local`. |
+| `runtimeClassName` | `""` | RuntimeClass, such as `gvisor` or `kata`, to run the agent in a sandboxed runtime. |
+| `priorityClassName` | `""` | PriorityClass of the pod. |
+| `networkPolicy.enabled` | `true` | Creates a NetworkPolicy. It has no effect when the CNI does not enforce NetworkPolicy. |
+| `networkPolicy.ingressFrom` | `[]` | Peers that may reach port 3080, in NetworkPolicy `from` format. Empty allows any source, so Ingress controllers, Tailscale proxies, and cloudflared work without changes. |
+| `networkPolicy.egress.blockPrivateNetworks` | `true` | Allows egress to the internet and DNS only. Blocks private, CGNAT, link-local (cloud metadata), and loopback ranges, which include the cluster network and the Kubernetes API. |
+| `networkPolicy.egress.privateIPv4` / `privateIPv6` | RFC 1918, `100.64.0.0/10`, `169.254.0.0/16`, ULA, link-local | Ranges that `blockPrivateNetworks` excludes. |
+| `networkPolicy.egress.extra` | `[]` | More egress rules, such as an in-cluster model gateway. |
 | `nodeSelector` | `{}` | Pod node selector. |
 | `tolerations` | `[]` | Pod tolerations. |
 | `affinity` | `{}` | Pod affinity. |
