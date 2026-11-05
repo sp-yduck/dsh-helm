@@ -1,0 +1,20 @@
+# Cloudflare Tunnel: https://dsh.example.com/ on the internet, behind Cloudflare Access.
+#
+# 1. Create a tunnel and run cloudflared in the cluster, for example with Cloudflare's guide:
+#    https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/deployment-guides/kubernetes/
+# 2. Add a public hostname dsh.example.com -> http://dsh.<namespace>.svc:3080 (release name "dsh").
+# 3. Protect the hostname with a Cloudflare Access policy.
+# 4. helm install dsh oci://ghcr.io/sp-yduck/charts/dsh -f cloudflare-tunnel.yaml
+#
+# The chart needs no Ingress: cloudflared reaches the Service directly.
+# cloudflared forwards the public hostname as Host; dsh must trust it.
+trustedHosts:
+  - dsh.example.com
+publicUrl: https://dsh.example.com/
+
+# The default NetworkPolicy accepts port 3080 from any pod. To accept only cloudflared:
+# networkPolicy:
+#   ingressFrom:
+#     - namespaceSelector:
+#         matchLabels:
+#           kubernetes.io/metadata.name: cloudflared

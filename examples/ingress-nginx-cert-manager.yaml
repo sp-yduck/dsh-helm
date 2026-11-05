@@ -1,0 +1,26 @@
+# ingress-nginx with a Let's Encrypt certificate from cert-manager.
+#
+#   helm install dsh oci://ghcr.io/sp-yduck/charts/dsh -f ingress-nginx-cert-manager.yaml
+#
+# Ingress hosts are trusted automatically.
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    # Agent sessions keep a WebSocket open; raise the idle timeouts.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  hosts:
+    - host: dsh.example.com
+  tls:
+    - hosts: [dsh.example.com]
+      secretName: dsh-tls
+publicUrl: https://dsh.example.com/
+
+# Accept UI traffic only from the ingress controller.
+networkPolicy:
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx

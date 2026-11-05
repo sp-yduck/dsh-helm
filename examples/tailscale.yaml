@@ -1,0 +1,24 @@
+# Tailscale Kubernetes operator Ingress: https://dsh.<tailnet>.ts.net/ from devices in your tailnet.
+# Requires the operator: https://tailscale.com/kb/1236/kubernetes-operator
+#
+#   helm install dsh oci://ghcr.io/sp-yduck/charts/dsh -f tailscale.yaml
+#
+# Replace tail1234.ts.net with your tailnet DNS name (admin console -> DNS).
+ingress:
+  enabled: true
+  className: tailscale
+  # The operator names the device from tls.hosts and does not route by host, so the rule has no host.
+  hosts:
+    - {}
+  tls:
+    - hosts: [dsh]
+  annotations: {}
+    # Serve through a ProxyGroup instead of a dedicated proxy:
+    # tailscale.com/proxy-group: ingress-proxies
+    # Also publish to the internet with Funnel (dsh still asks for its login token):
+    # tailscale.com/funnel: "true"
+
+# The proxy forwards the MagicDNS name as Host; dsh must trust it.
+trustedHosts:
+  - dsh.tail1234.ts.net
+publicUrl: https://dsh.tail1234.ts.net/
