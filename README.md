@@ -164,5 +164,5 @@ The health probes only open a TCP connection to port 3080, because the root page
 
 ## Files
 
-- `Dockerfile` builds the image from `node:24-bookworm-slim`. It adds `git`, `ca-certificates`, and `tini`, and runs as the `node` user (UID 1000) with `HOME=/data`.
-- `helm/dsh/` is the chart. It creates a Deployment, a Service, a PersistentVolumeClaim, and an optional Ingress.
+- `Dockerfile` builds the image from `node:24-bookworm-slim` and runs as the `node` user (UID 1000) with `HOME=/data`. For coding tasks it adds `git`, `gh`, `ripgrep`, `fd`, `jq`, `curl`, `build-essential`, Python 3 with `uv`, Go, Rust (with `clippy` and `rustfmt`), and pnpm/yarn through corepack. The `GO_VERSION` and `RUST_VERSION` build arguments set those versions. The image is about 3.4 GB.
+- `helm/dsh/` is the chart. It creates a Deployment, a Service, a PersistentVolumeClaim, and an optional Ingress. An init container gives `/data/workspace` to the `node` user, because storage that ignores `fsGroup` would otherwise leave it owned by root.
