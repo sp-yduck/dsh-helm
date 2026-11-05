@@ -41,6 +41,9 @@ jobs:
 
   chart:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # create tags and GitHub Releases
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
@@ -95,3 +98,20 @@ jobs:
             sleep $((i * 5))
           done
           exit 1
+
+      # One GitHub Release per chart version, tagged dsh-<version>, with generated notes and the packaged chart.
+      - if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(yq '.version' helm/dsh/Chart.yaml)
+          app=$(yq '.appVersion' helm/dsh/Chart.yaml)
+          tag="dsh-$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::notice::release $tag already exists; skipping"
+            exit 0
+          fi
+          notes=$(printf 'Chart `%s` · dsh `%s`\n\n```sh\nhelm install dsh oci://ghcr.io/%s/charts/dsh --version %s\n```\n' \
+            "$version" "$app" "${{ github.repository_owner }}" "$version")
+          gh release create "$tag" dsh-*.tgz --target "$GITHUB_SHA" --title "dsh chart $version" \
+            --notes "$notes" --generate-notes
