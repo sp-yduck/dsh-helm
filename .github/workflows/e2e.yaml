@@ -72,11 +72,15 @@ jobs:
       - name: Check access through the Service
         run: |
           token=$(kubectl logs deploy/dsh | grep -oE 'token=[A-Za-z0-9_-]+' | head -1 | cut -d= -f2)
-          out=$(kubectl run svc-check --rm -i --restart=Never --image=curlimages/curl:8.17.0 --command -- sh -c "
+          # Read the output from the pod log: `kubectl run -i` can miss lines printed before it attaches.
+          kubectl run svc-check --restart=Never --image=curlimages/curl:8.17.0 --command -- sh -c "
             for h in dsh.example.com dsh.tail1234.ts.net evil.example.com; do
               curl -s -c /tmp/jar -o /dev/null -H \"Host: \$h\" 'http://dsh:3080/?token=$token'
               echo \"\$h=\$(curl -s -b /tmp/jar -o /dev/null -w '%{http_code}' -H \"Host: \$h\" http://dsh:3080/api/settings)\"
-            done")
+            done"
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/svc-check --timeout=120s
+          out=$(kubectl logs svc-check)
+          kubectl delete pod svc-check --wait=false
           echo "$out"
           check() { echo "$out" | grep -qx "$1=$2" || { echo "::error::$1: expected $2"; exit 1; }; echo "ok: /api with Host $1 -> $2"; }
           check dsh.example.com 404
