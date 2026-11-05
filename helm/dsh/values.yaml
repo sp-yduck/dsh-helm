@@ -27,6 +27,34 @@ ingress:
     - host: dsh.example.com
   tls: []
 
+# HTTPS inside your tailnet through the Tailscale Kubernetes operator (installed separately).
+# Opens at https://<hostname>.<tailnet>/ and adds that host to the trusted hosts and the login URL.
+tailscale:
+  enabled: false
+  hostname: dsh
+  # Your tailnet DNS name, e.g. tail1234.ts.net (Admin console -> DNS).
+  tailnet: ""
+  # Also publish to the internet with Tailscale Funnel. dsh still requires its login token.
+  funnel: false
+  # Serve through an existing ProxyGroup instead of a dedicated proxy.
+  proxyGroup: ""
+  annotations: {}
+
+# Cloudflare Tunnel (remotely managed). Route each public hostname to
+# http://<release>-dsh.<namespace>.svc:3080 in the Cloudflare dashboard. Protect it with Cloudflare Access.
+cloudflared:
+  enabled: false
+  # Public hostnames routed to dsh; added to the trusted hosts, the first one to the login URL.
+  hostnames: []
+  tunnelToken:
+    existingSecret: ""
+    key: token
+  replicas: 1
+  image:
+    repository: cloudflare/cloudflared
+    tag: "2026.10.7"
+  resources: {}
+
 # Holds $DSH_HOME (settings, sessions, credentials) and /data/workspace.
 persistence:
   enabled: true

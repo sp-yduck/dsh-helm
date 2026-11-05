@@ -38,7 +38,7 @@ spec:
       initContainers:
         # The volume hides the image's /data/workspace, and the runtime would create the missing workdir as root.
         - name: workspace
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: {{ include "dsh.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["sh", "-c", "mkdir -p /data/workspace && chown 1000:1000 /data/workspace"]
           workingDir: /data
@@ -54,19 +54,14 @@ spec:
               mountPath: /data
       containers:
         - name: dsh
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: {{ include "dsh.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
           args:
-            {{- range .Values.trustedHosts }}
+            {{- range (include "dsh.trustedHosts" . | fromYamlArray) }}
             - --trusted-host={{ . }}
             {{- end }}
-            {{- if .Values.ingress.enabled }}
-            {{- range .Values.ingress.hosts }}
-            - --trusted-host={{ .host }}
-            {{- end }}
-            {{- end }}
-            {{- with .Values.publicUrl }}
+            {{- with include "dsh.publicUrl" . }}
             - --public-url={{ . }}
             {{- end }}
             {{- range .Values.extraArgs }}

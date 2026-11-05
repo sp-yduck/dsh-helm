@@ -1,15 +1,24 @@
 dsh issues a new launch token on every start. Get the login URL with:
 
   kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "dsh.fullname" . }} | grep token=
+{{- with include "dsh.publicUrl" . }}
 
-{{- if .Values.ingress.enabled }}
+The URL starts with {{ . }}
+{{- end }}
+{{- if .Values.tailscale.enabled }}
 
-Open it via https://{{ (first .Values.ingress.hosts).host }}/?token=<token>
-{{- else }}
+Tailscale: once the operator has provisioned the proxy, open https://{{ include "dsh.tailscaleFQDN" . }}/ from a device in your tailnet.
+  kubectl -n {{ .Release.Namespace }} get ingress {{ include "dsh.fullname" . }}-tailscale
+{{- end }}
+{{- if .Values.cloudflared.enabled }}
 
-To open the UI from your machine, forward the port and open the printed URL:
+Cloudflare Tunnel: route {{ join ", " .Values.cloudflared.hostnames | default "your public hostname" }} to
+  http://{{ include "dsh.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
+in the Cloudflare dashboard, and protect it with a Cloudflare Access policy.
+{{- end }}
+
+From your machine, you can always use:
 
   kubectl -n {{ .Release.Namespace }} port-forward deploy/{{ include "dsh.fullname" . }} 3080:3080
 
-For access from other machines, enable the Ingress with TLS.
-{{- end }}
+and open the printed URL with the address replaced by http://127.0.0.1:3080.

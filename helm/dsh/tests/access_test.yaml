@@ -1,0 +1,75 @@
+suite: access paths
+tests:
+  - it: renders a Tailscale Ingress and trusts the tailnet host
+    set:
+      tailscale.enabled: true
+      tailscale.tailnet: tail1234.ts.net
+    asserts:
+      - template: templates/tailscale-ingress.yaml
+        equal: { path: spec.ingressClassName, value: tailscale }
+      - template: templates/tailscale-ingress.yaml
+        equal: { path: "spec.tls[0].hosts[0]", value: dsh }
+      - template: templates/tailscale-ingress.yaml
+        equal: { path: spec.defaultBackend.service.name, value: RELEASE-NAME-dsh }
+      - template: templates/deployment.yaml
+        contains: { path: "spec.template.spec.containers[0].args", content: --trusted-host=dsh.tail1234.ts.net }
+      - template: templates/deployment.yaml
+        contains: { path: "spec.template.spec.containers[0].args", content: --public-url=https://dsh.tail1234.ts.net/ }
+  - it: adds Funnel and ProxyGroup annotations
+    template: templates/tailscale-ingress.yaml
+    set:
+      tailscale.enabled: true
+      tailscale.tailnet: tail1234.ts.net
+      tailscale.funnel: true
+      tailscale.proxyGroup: ingress-proxies
+    asserts:
+      - equal: { path: "metadata.annotations[\"tailscale.com/funnel\"]", value: "true" }
+      - equal: { path: "metadata.annotations[\"tailscale.com/proxy-group\"]", value: ingress-proxies }
+  - it: requires the tailnet name
+    template: templates/tailscale-ingress.yaml
+    set: { tailscale.enabled: true }
+    asserts:
+      - failedTemplate: { errorPattern: tailscale.tailnet is required }
+  - it: deploys cloudflared and trusts the public hostnames
+    set:
+      cloudflared.enabled: true
+      cloudflared.hostnames: [dsh.example.com, dsh2.example.com]
+      cloudflared.tunnelToken.existingSecret: cf
+    asserts:
+      - template: templates/cloudflared.yaml
+        equal: { path: "spec.template.spec.containers[0].env[0].valueFrom.secretKeyRef.name", value: cf }
+      - template: templates/cloudflared.yaml
+        equal: { path: "spec.selector.matchLabels[\"app.kubernetes.io/name\"]", value: dsh-cloudflared }
+      - template: templates/deployment.yaml
+        contains: { path: "spec.template.spec.containers[0].args", content: --trusted-host=dsh2.example.com }
+      - template: templates/deployment.yaml
+        contains: { path: "spec.template.spec.containers[0].args", content: --public-url=https://dsh.example.com/ }
+  - it: requires the tunnel token Secret
+    template: templates/cloudflared.yaml
+    set: { cloudflared.enabled: true }
+    asserts:
+      - failedTemplate: { errorPattern: tunnelToken.existingSecret is required }
+  - it: lets publicUrl win over derived URLs
+    template: templates/deployment.yaml
+    set:
+      publicUrl: https://custom.example.com/
+      tailscale.enabled: true
+      tailscale.tailnet: tail1234.ts.net
+    asserts:
+      - contains: { path: "spec.template.spec.containers[0].args", content: --public-url=https://custom.example.com/ }
+  - it: allows an Ingress rule without a host
+    template: templates/ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.hosts: [{}]
+    asserts:
+      - notExists: { path: "spec.rules[0].host" }
+      - equal: { path: "spec.rules[0].http.paths[0].backend.service.name", value: RELEASE-NAME-dsh }
+  - it: does not trust duplicate hosts twice
+    template: templates/deployment.yaml
+    set:
+      trustedHosts: [a.example.com]
+      ingress.enabled: true
+      ingress.hosts: [{ host: a.example.com }]
+    asserts:
+      - lengthEqual: { path: "spec.template.spec.containers[0].args", count: 1 }
