@@ -128,6 +128,10 @@ jobs:
             --set 'extraVolumes[0].name=extra' --set 'extraVolumes[0].emptyDir.medium=Memory' \
             --set 'extraVolumeMounts[0].name=extra' --set 'extraVolumeMounts[0].mountPath=/extra' \
             | ./kubeconform -strict -summary
+          for f in examples/*.yaml; do
+            echo "== $f"
+            helm template dsh helm/dsh -f "$f" | ./kubeconform -strict -summary
+          done
 
       # A chart change must raise Chart.yaml version, or the push on main would overwrite the published chart.
       - if: github.event_name == 'pull_request'

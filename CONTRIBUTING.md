@@ -28,6 +28,10 @@ CI also installs the chart in a kind cluster (`.github/workflows/e2e.yaml`) and 
 
 To build the image locally, run `docker build -t dsh:dev .`. The image and the chart share the chart `version`, so a change to `Dockerfile` or `scripts/` also needs a higher `version` in `helm/dsh/Chart.yaml`; CI enforces this. To change the dsh version, change both `ARG DSH_VERSION` in the `Dockerfile` and `appVersion` in `Chart.yaml` (Renovate does this automatically).
 
+## Add an example
+
+Access paths for specific providers live in `examples/` as values files, not as chart values, so the chart does not have to follow provider changes. Add a file there and a row to `examples/README.md`; CI renders and validates it.
+
 ## Pull requests
 
 - Keep each pull request to one topic.

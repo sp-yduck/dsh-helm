@@ -111,47 +111,22 @@ helm install dsh oci://ghcr.io/sp-yduck/charts/dsh -f my-values.yaml
 
 ## Choose an access path
 
-dsh needs HTTPS, or `localhost`, in the browser, and it must trust the `Host` header that the browser sends. The chart sets both for each path below.
+dsh needs HTTPS, or `localhost`, in the browser, and it must trust the `Host` header that the browser sends. The chart stays provider-neutral: every path is configured with `ingress.*`, `trustedHosts`, and `publicUrl`, and [`examples/`](examples/) has ready-made values files.
 
-| Path | Reach | Values |
+| Path | Reach | Example |
 | --- | --- | --- |
-| `kubectl port-forward` | Your machine | None |
-| [Tailscale](https://tailscale.com/kb/1236/kubernetes-operator) operator | Devices in your tailnet (optionally the internet with Funnel) | `tailscale.enabled`, `tailscale.tailnet` |
-| [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) | The internet, behind Cloudflare Access | `cloudflared.enabled`, `cloudflared.hostnames`, `cloudflared.tunnelToken.existingSecret` |
-| Ingress controller (ingress-nginx, Traefik, …) with TLS | Your network or the internet | `ingress.*` |
-
-### Tailscale
-
-Install the [Tailscale Kubernetes operator](https://tailscale.com/kb/1236/kubernetes-operator), then:
+| `kubectl port-forward` | Your machine | None needed |
+| Tailscale Kubernetes operator | Devices in your tailnet (optionally the internet with Funnel) | [`examples/tailscale.yaml`](examples/tailscale.yaml) |
+| Cloudflare Tunnel | The internet, behind Cloudflare Access | [`examples/cloudflare-tunnel.yaml`](examples/cloudflare-tunnel.yaml) |
+| Ingress controller with TLS | Your network or the internet | [`examples/ingress-nginx-cert-manager.yaml`](examples/ingress-nginx-cert-manager.yaml) |
 
 ```sh
-helm install dsh oci://ghcr.io/sp-yduck/charts/dsh \
-  --set tailscale.enabled=true --set tailscale.tailnet=tail1234.ts.net
+curl -fsSLO https://raw.githubusercontent.com/sp-yduck/dsh-helm/main/examples/tailscale.yaml
+# edit the tailnet name, then:
+helm install dsh oci://ghcr.io/sp-yduck/charts/dsh -f tailscale.yaml
 ```
 
-dsh opens at `https://dsh.tail1234.ts.net/` from devices in your tailnet. `tailscale.tailnet` is your tailnet DNS name from the admin console; the chart uses it to trust the host and to print the right login URL. Set `tailscale.hostname` to change `dsh`, `tailscale.proxyGroup` to use a ProxyGroup, or `tailscale.funnel=true` to publish it to the internet (dsh still asks for its login token).
-
-### Cloudflare Tunnel
-
-Create a remotely-managed tunnel in the Cloudflare dashboard, store its token, and install:
-
-```sh
-kubectl create secret generic dsh-tunnel --from-literal=token=<tunnel token>
-helm install dsh oci://ghcr.io/sp-yduck/charts/dsh \
-  --set cloudflared.enabled=true \
-  --set 'cloudflared.hostnames[0]=dsh.example.com' \
-  --set cloudflared.tunnelToken.existingSecret=dsh-tunnel
-```
-
-In the tunnel's public hostname settings, route `dsh.example.com` to `http://dsh.<namespace>.svc:3080`. Put a [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/) policy in front of it so that only you reach the login page.
-
-### Ingress controller
-
-See [Install the chart](#install-the-chart). Leave `host` out of an `ingress.hosts` entry when the controller does not route by host, and list the name that browsers use in `trustedHosts`.
-
-### Paths that do not work
-
-- **Plain HTTP on a non-local address**, such as a `NodePort`, a `LoadBalancer` Service, or a Tailscale `LoadBalancer` without HTTPS. Browsers do not treat these as secure contexts, and anyone on the path can read the login token. Use one of the HTTPS paths above.
+**Paths that do not work:** plain HTTP on a non-local address, such as a `NodePort`, a `LoadBalancer` Service, or a Tailscale `LoadBalancer` without HTTPS. Browsers do not treat these as secure contexts, and anyone on the path can read the login token.
 
 ## Log in
 

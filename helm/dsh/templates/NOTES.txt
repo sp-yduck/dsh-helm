@@ -5,17 +5,6 @@ dsh issues a new launch token on every start. Get the login URL with:
 
 The URL starts with {{ . }}
 {{- end }}
-{{- if .Values.tailscale.enabled }}
-
-Tailscale: once the operator has provisioned the proxy, open https://{{ include "dsh.tailscaleFQDN" . }}/ from a device in your tailnet.
-  kubectl -n {{ .Release.Namespace }} get ingress {{ include "dsh.fullname" . }}-tailscale
-{{- end }}
-{{- if .Values.cloudflared.enabled }}
-
-Cloudflare Tunnel: route {{ join ", " .Values.cloudflared.hostnames | default "your public hostname" }} to
-  http://{{ include "dsh.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
-in the Cloudflare dashboard, and protect it with a Cloudflare Access policy.
-{{- end }}
 
 From your machine, you can always use:
 

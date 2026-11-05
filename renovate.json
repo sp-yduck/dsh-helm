@@ -48,17 +48,6 @@
     },
     {
       "customType": "regex",
-      "description": "cloudflared image in chart values",
-      "managerFilePatterns": [
-        "/^helm/dsh/values\\.yaml$/"
-      ],
-      "matchStrings": [
-        "repository: (?<depName>cloudflare/cloudflared)\\s+tag: \"(?<currentValue>[^\"]+)\""
-      ],
-      "datasourceTemplate": "docker"
-    },
-    {
-      "customType": "regex",
       "description": "Pinned tool versions in workflows",
       "managerFilePatterns": [
         "/^\\.github/workflows/.+\\.ya?ml$/"
