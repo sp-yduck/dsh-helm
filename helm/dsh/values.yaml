@@ -35,6 +35,16 @@ persistence:
   existingClaim: ""
 
 resources: {}
+
+# Extra metadata on the pod template.
+podAnnotations: {}
+podLabels: {}
+
+# Extra volumes for the pod and mounts for the dsh container,
+# e.g. a Secret with an SSH key or a ConfigMap with tool configuration.
+extraVolumes: []
+extraVolumeMounts: []
+
 nodeSelector: {}
 tolerations: []
 affinity: {}
