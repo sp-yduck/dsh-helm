@@ -44,7 +44,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - run: helm lint helm/dsh && helm package helm/dsh
+      - run: helm lint --strict helm/dsh && helm package helm/dsh
+
+      # Render the chart with default and feature-rich values and validate the manifests against the Kubernetes schemas.
+      - name: Validate rendered manifests
+        run: |
+          curl -fsSL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz | tar xz kubeconform
+          helm template dsh helm/dsh | ./kubeconform -strict -summary
+          helm template dsh helm/dsh \
+            --set ingress.enabled=true --set persistence.enabled=false \
+            --set-string podAnnotations.example=true --set-string podLabels.example=true \
+            --set 'extraVolumes[0].name=extra' --set 'extraVolumes[0].emptyDir.medium=Memory' \
+            --set 'extraVolumeMounts[0].name=extra' --set 'extraVolumeMounts[0].mountPath=/extra' \
+            | ./kubeconform -strict -summary
 
       # A chart change must raise Chart.yaml version, or the push on main would overwrite the published chart.
       - if: github.event_name == 'pull_request'
