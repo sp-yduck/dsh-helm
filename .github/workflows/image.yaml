@@ -72,4 +72,9 @@ jobs:
             echo "::notice::chart $version is already published; skipping push"
             exit 0
           fi
-          helm push dsh-*.tgz "$CHART_REPO"
+          # GHCR can 404 the just-pushed manifest when helm tags it; the retry reuses the uploaded blobs.
+          for i in 1 2 3; do
+            helm push dsh-*.tgz "$CHART_REPO" && exit 0
+            sleep $((i * 5))
+          done
+          exit 1
