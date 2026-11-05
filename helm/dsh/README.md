@@ -20,8 +20,21 @@ The chart deploys the DeepSeek Harness Web UI. The [repository README](../../REA
 | `ingress.enabled` | `false` | Creates an Ingress for the Service. |
 | `ingress.className` | `""` | `ingressClassName` of the Ingress. |
 | `ingress.annotations` | `{}` | Ingress annotations. |
-| `ingress.hosts` | `[{host: dsh.example.com}]` | Ingress hosts. Each host routes `/` to the Service. |
+| `ingress.hosts` | `[{host: dsh.example.com}]` | Ingress hosts. Each entry routes `/` to the Service; leave `host` out for a rule without a host. |
 | `ingress.tls` | `[]` | Ingress `tls` entries. |
+| `tailscale.enabled` | `false` | Creates an Ingress for the Tailscale Kubernetes operator. |
+| `tailscale.hostname` | `dsh` | MagicDNS name of the Tailscale proxy. |
+| `tailscale.tailnet` | `""` | Tailnet DNS name, such as `tail1234.ts.net`. Required when enabled. The chart trusts `<hostname>.<tailnet>` and uses it for the login URL. |
+| `tailscale.funnel` | `false` | Also publishes the UI to the internet with Tailscale Funnel. |
+| `tailscale.proxyGroup` | `""` | Serves through an existing Tailscale ProxyGroup. |
+| `tailscale.annotations` | `{}` | More annotations on the Tailscale Ingress. |
+| `cloudflared.enabled` | `false` | Deploys cloudflared for a remotely-managed Cloudflare Tunnel. |
+| `cloudflared.hostnames` | `[]` | Public hostnames routed to dsh. The chart trusts them and uses the first for the login URL. |
+| `cloudflared.tunnelToken.existingSecret` | `""` | Secret holding the tunnel token. Required when enabled. |
+| `cloudflared.tunnelToken.key` | `token` | Key of the token in the Secret. |
+| `cloudflared.replicas` | `1` | cloudflared replicas. |
+| `cloudflared.image.repository` / `tag` | `cloudflare/cloudflared` / pinned | cloudflared image. |
+| `cloudflared.resources` | `{}` | cloudflared resource requests and limits. |
 | `persistence.enabled` | `true` | Mounts a PersistentVolumeClaim at `/data`. When false, the chart mounts an `emptyDir`, and data is lost when the pod is replaced, for example by `helm upgrade`. |
 | `persistence.size` | `10Gi` | Size of the claim that the chart creates. |
 | `persistence.storageClass` | `""` | Storage class of the claim that the chart creates. An empty value uses the cluster default. |
