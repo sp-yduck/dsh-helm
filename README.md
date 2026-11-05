@@ -5,12 +5,16 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Image](https://img.shields.io/badge/image-ghcr.io%2Fsp--yduck%2Fdsh-2496ed?logo=docker&logoColor=white)](https://github.com/sp-yduck/dsh-helm/pkgs/container/dsh)
 
-Run the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) coding-agent Web UI on Kubernetes with one `helm install`.
+Run the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) coding agent as an **always-on workspace in your Kubernetes cluster**: install it with one `helm install`, try it with `kubectl port-forward`, and reach it from any device through your Ingress with TLS. Your sessions, API keys, and cloned repositories stay on a PersistentVolume.
 
 - **Ready-made multi-arch image** (`linux/amd64`, `linux/arm64`) with `git`, `gh`, Python/`uv`, Go, Rust, Node/pnpm, `ripgrep`, and `jq`, so the agent can build and test real projects.
 - **Persistent workspace**: settings, sessions, API keys, and cloned repositories live on a PersistentVolume and survive restarts and upgrades.
+- **`kubectl port-forward` and Ingress both work.** dsh runs on loopback behind a byte-level relay, so its token, cookie, and Host checks stay in force (tested in CI).
+- **Published chart**: install from `oci://ghcr.io/sp-yduck/charts/dsh` or `helm repo add`; every version has a GitHub Release.
 - **Ingress and TLS** support, with the Ingress hosts added to the hosts that dsh trusts.
 - **Validated values**: a JSON schema catches typos such as `ingres:` before anything is deployed.
+
+**Use dsh-helm when** you want dsh on a server instead of your laptop: one instance per developer in a shared cluster, a homelab or tailnet you open from your phone, or a GitOps-managed setup with Argo CD or Flux. **Use a Docker Compose setup instead** for a single machine where dsh only needs to reach local files.
 
 > [!WARNING]
 > dsh runs shell commands inside the pod, and anyone who can log in to the UI can use it. Read the upstream [safety notice](https://github.com/deepseek-ai/deepseek-harness/blob/master/SAFETY.md) and [SECURITY.md](SECURITY.md) before you expose it.
