@@ -13,10 +13,12 @@ Report security problems privately as described in [SECURITY.md](SECURITY.md), n
 1. Edit the files under `helm/dsh/`.
 2. If you add or change a value, update `values.yaml`, `values.schema.json`, and the table in `helm/dsh/README.md`.
 3. Raise `version` in `helm/dsh/Chart.yaml`. CI fails a pull request that changes the chart without a higher version, because the push on `main` must never overwrite a published chart. Use a minor bump for new values or behavior and a patch bump for fixes.
-4. Check the chart locally:
+4. Add or update a test in `helm/dsh/tests/` for the behavior you changed.
+5. Check the chart locally:
 
    ```sh
    helm lint --strict helm/dsh
+   helm unittest helm/dsh   # https://github.com/helm-unittest/helm-unittest
    helm template dsh helm/dsh | kubeconform -strict -summary
    ```
 
