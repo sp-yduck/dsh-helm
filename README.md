@@ -6,7 +6,7 @@
 
 Run the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) coding-agent Web UI on Kubernetes with one `helm install`.
 
-- **Ready-made image** with `git`, `gh`, Python/`uv`, Go, Rust, Node/pnpm, `ripgrep`, and `jq`, so the agent can build and test real projects.
+- **Ready-made multi-arch image** (`linux/amd64`, `linux/arm64`) with `git`, `gh`, Python/`uv`, Go, Rust, Node/pnpm, `ripgrep`, and `jq`, so the agent can build and test real projects.
 - **Persistent workspace**: settings, sessions, API keys, and cloned repositories live on a PersistentVolume and survive restarts and upgrades.
 - **Ingress and TLS** support, with the Ingress hosts added to the hosts that dsh trusts.
 - **Validated values**: a JSON schema catches typos such as `ingres:` before anything is deployed.
