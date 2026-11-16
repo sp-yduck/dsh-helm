@@ -6,7 +6,7 @@ FROM node:24-bookworm-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       git ca-certificates tini curl wget gnupg openssh-client \
-      ripgrep fd-find jq less file tree unzip zip xz-utils patch diffutils procps \
+      ripgrep fd-find jq vim less file tree unzip zip xz-utils patch diffutils procps \
       build-essential pkg-config python3 python3-venv python3-pip \
  && ln -s /usr/bin/fdfind /usr/local/bin/fd \
  && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
@@ -30,7 +30,7 @@ RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile min
  && chown -R node:node "$RUSTUP_HOME" "$CARGO_HOME"
 ENV PATH=/usr/local/cargo/bin:/usr/local/go/bin:/data/go/bin:$PATH
 
-ARG DSH_VERSION=0.2.1-rc.5
+ARG DSH_VERSION=0.2.2-rc.3
 RUN npm install -g "@deepseek-ai/dsh@${DSH_VERSION}" \
  && npm cache clean --force
 

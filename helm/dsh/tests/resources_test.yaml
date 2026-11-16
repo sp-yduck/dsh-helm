@@ -37,6 +37,18 @@ tests:
     asserts:
       - equal: { path: "spec.ports[0].port", value: 8080 }
       - equal: { path: "spec.ports[0].targetPort", value: http }
+  - it: sets the loadBalancerClass on a LoadBalancer Service
+    template: templates/service.yaml
+    set:
+      service.type: LoadBalancer
+      service.loadBalancerClass: service.k8s.aws/nlb
+    asserts:
+      - equal: { path: spec.type, value: LoadBalancer }
+      - equal: { path: spec.loadBalancerClass, value: service.k8s.aws/nlb }
+  - it: omits the loadBalancerClass by default
+    template: templates/service.yaml
+    asserts:
+      - notExists: { path: spec.loadBalancerClass }
   - it: allows an Ingress rule without a host
     template: templates/ingress.yaml
     set:
