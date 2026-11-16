@@ -17,6 +17,7 @@ The chart deploys the DeepSeek Harness Web UI. The [repository README](../../REA
 | `env` | `[]` | Extra container environment variables, in Kubernetes `env` format. |
 | `envFrom` | `[]` | Extra environment sources, in Kubernetes `envFrom` format. Use it to pass API keys from a Secret. |
 | `service.type` | `ClusterIP` | Service type. |
+| `service.loadBalancerClass` | `""` | `loadBalancerClass` of a `LoadBalancer` Service, such as `service.k8s.aws/nlb`. An empty value uses the cluster default. |
 | `service.port` | `3080` | Service port. The container always listens on 3080. |
 | `ingress.enabled` | `false` | Creates an Ingress for the Service. |
 | `ingress.className` | `""` | `ingressClassName` of the Ingress. |

@@ -90,6 +90,9 @@
             "LoadBalancer"
           ]
         },
+        "loadBalancerClass": {
+          "type": "string"
+        },
         "port": {
           "type": "integer",
           "minimum": 1,

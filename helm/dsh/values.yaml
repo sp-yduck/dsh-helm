@@ -22,6 +22,8 @@ envFrom: []
 
 service:
   type: ClusterIP
+  # Only for a LoadBalancer Service, e.g. service.k8s.aws/nlb. Empty uses the cluster default.
+  loadBalancerClass: ""
   port: 3080
 
 ingress:
