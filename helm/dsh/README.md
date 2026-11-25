@@ -16,6 +16,8 @@ The chart deploys the DeepSeek Harness Web UI. The [repository README](../../REA
 | `plugins` | `[]` | Plugin bundles installed with `dsh plugin --profile web add` before dsh starts, e.g. `github:sp-yduck/dsh-ollama-cloud`. Pin a commit with `#<sha>`. |
 | `env` | `[]` | Extra container environment variables, in Kubernetes `env` format. |
 | `envFrom` | `[]` | Extra environment sources, in Kubernetes `envFrom` format. Use it to pass API keys from a Secret. |
+| `telemetry.enabled` | `true` | OpenTelemetry Session-log export: after in-UI feedback, dsh uploads the Session log to DeepSeek's collector. `false` sets `DSH_TELEMETRY_DISABLED=1`. |
+| `telemetry.sessionLog` | `true` | `dsh_session_log` request field: attaches the canonical Session log to official DeepSeek API requests. `false` mounts a `--patch` overlay that disables it. |
 | `service.type` | `ClusterIP` | Service type. |
 | `service.loadBalancerClass` | `""` | `loadBalancerClass` of a `LoadBalancer` Service, such as `service.k8s.aws/nlb`. An empty value uses the cluster default. |
 | `service.port` | `3080` | Service port. The container always listens on 3080. |
@@ -64,6 +66,20 @@ The chart sets these values and does not expose them:
 - `fsGroup: 1000`, so the `node` user in the image can write to the volume.
 - `fsGroupChangePolicy: OnRootMismatch`. dsh exits when `.credentials.yaml` is readable by its group, and a recursive `fsGroup` change on each mount would make it so.
 - TCP readiness and liveness probes on port 3080. The liveness probe starts after 30 seconds.
+
+## Outbound data
+
+The chart adds no analytics of its own, but dsh can send a Session log out two ways. Both default to dsh's own default, on, so an upgrade does not change what an existing deployment sends:
+
+- **`telemetry.enabled`** — the OpenTelemetry export. Capture is feedback-only: dsh uploads the Session log to `https://dsh-otel-collector.deepseeksvc.com/v1/logs` after someone records feedback (a rating or a note) in the UI, for every model provider. `false` sets `DSH_TELEMETRY_DISABLED=1` on the container. dsh reads any non-empty value as an opt-out, including `0` and `false`, and constructs no exporter, so feedback stays in the volume.
+- **`telemetry.sessionLog`** — the `dsh_session_log` request field. dsh attaches the canonical Session log, the whole conversation, to requests it sends through the official DeepSeek API. Requests to other providers, including an in-cluster gateway or a vendor added through `plugins`, never carry it. `false` mounts a ConfigMap and passes `--patch`, which dsh applies after the profile layer: the Web UI's "Upload Session Log when using the official model API" switch can then no longer re-enable the upload, and the setting comes back after an in-place upgrade of an existing volume.
+
+```sh
+helm upgrade dsh helm/dsh --reuse-values \
+  --set telemetry.enabled=false --set telemetry.sessionLog=false
+```
+
+Neither switch covers model traffic: prompts and responses still go to whichever provider you configure, so the provider's own retention applies. The anonymous installation id in `/data/.dsh/.anonymous-user-id` continues to correlate feedback, telemetry, and official DeepSeek requests, and deleting that file mints a new one at the next start. If you must enforce this at the network layer instead, restrict egress in `networkPolicy.egress.extra`; the default policy allows the internet so that model APIs work.
 
 ## Volume layout
 

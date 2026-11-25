@@ -78,6 +78,18 @@
         "type": "object"
       }
     },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "sessionLog": {
+          "type": "boolean"
+        }
+      }
+    },
     "service": {
       "type": "object",
       "additionalProperties": false,

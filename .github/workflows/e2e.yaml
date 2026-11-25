@@ -102,6 +102,18 @@ jobs:
           fi
           mustfail kubectl exec deploy/dsh -- curl -s -o /dev/null -m 5 http://169.254.169.254/
 
+      # Both uploads off: DSH_TELEMETRY_DISABLED for the OTel exporter, and a --patch overlay for
+      # the Session-log request field. The readiness-gated upgrade also proves dsh boots with the
+      # extra argument, and that the overlay file parses.
+      - name: Check the telemetry opt-out
+        run: |
+          set -x
+          helm upgrade dsh helm/dsh --reuse-values --wait --timeout 5m \
+            --set telemetry.enabled=false --set telemetry.sessionLog=false
+          kubectl exec deploy/dsh -- printenv DSH_TELEMETRY_DISABLED | grep -qx 1
+          kubectl exec deploy/dsh -- grep -qx -- '- id: session-log-deepseek' /etc/dsh/telemetry/patch.yaml
+          kubectl exec deploy/dsh -- grep -q 'enabled: false' /etc/dsh/telemetry/patch.yaml
+
       - if: failure()
         run: |
           kubectl describe pod -l app.kubernetes.io/name=dsh

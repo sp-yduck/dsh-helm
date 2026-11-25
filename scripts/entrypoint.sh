@@ -9,4 +9,8 @@ case "$host" in
 	127.*|::1|localhost) ;;
 	*) node /usr/local/lib/dsh-relay.mjs "$host" "$port" "$port" & ;;
 esac
-exec dsh --profile web --no-open --host 127.0.0.1 --port "$port" "$@"
+# The chart passes its arguments through $@, including launcher options such as
+# `--patch`. dsh stops parsing launcher options at the first app argument, so the
+# app flags have to come last or a `--patch` overlay is forwarded to the app and
+# rejected as an unknown option.
+exec dsh --profile web "$@" --no-open --host 127.0.0.1 --port "$port"

@@ -1,0 +1,126 @@
+suite: outbound telemetry
+templates:
+  - templates/deployment.yaml
+  - templates/telemetry.yaml
+tests:
+  - it: keeps both uploads on by default
+    # publicUrl keeps a non-empty arg list, so the assertion below sees args rather than null.
+    set:
+      publicUrl: https://dsh.example.com/
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DSH_TELEMETRY_DISABLED
+            value: "1"
+        template: templates/deployment.yaml
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --patch=/etc/dsh/telemetry/patch.yaml
+        template: templates/deployment.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/telemetry.yaml
+
+  - it: opts out of the OTel exporter when telemetry.enabled is false
+    set:
+      telemetry.enabled: false
+      publicUrl: https://dsh.example.com/
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DSH_TELEMETRY_DISABLED
+            value: "1"
+        template: templates/deployment.yaml
+      # The Session-log request field has its own switch.
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --patch=/etc/dsh/telemetry/patch.yaml
+        template: templates/deployment.yaml
+      - hasDocuments:
+          count: 0
+        template: templates/telemetry.yaml
+
+  - it: disables the Session-log request field when telemetry.sessionLog is false
+    set:
+      telemetry.sessionLog: false
+      trustedHosts: [dsh.example.com]
+    asserts:
+      # The launcher stops parsing its own options at the first app argument, so the
+      # overlay has to precede the app flags.
+      - equal:
+          path: spec.template.spec.containers[0].args[0]
+          value: --patch=/etc/dsh/telemetry/patch.yaml
+        template: templates/deployment.yaml
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --trusted-host=dsh.example.com
+        template: templates/deployment.yaml
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: telemetry-patch
+            mountPath: /etc/dsh/telemetry
+            readOnly: true
+        template: templates/deployment.yaml
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: telemetry-patch
+            configMap:
+              name: RELEASE-NAME-dsh-telemetry
+        template: templates/deployment.yaml
+      # The exporter has its own switch.
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DSH_TELEMETRY_DISABLED
+            value: "1"
+        template: templates/deployment.yaml
+      - equal:
+          # dsh applies a --patch overlay after the profile layer, so this value wins over
+          # the Web UI switch even after an in-place upgrade.
+          path: data["patch.yaml"]
+          value: |
+            - id: session-log-deepseek
+              config:
+                enabled: false
+        template: templates/telemetry.yaml
+
+  - it: turns both uploads off together
+    set:
+      telemetry.enabled: false
+      telemetry.sessionLog: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DSH_TELEMETRY_DISABLED
+            value: "1"
+        template: templates/deployment.yaml
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --patch=/etc/dsh/telemetry/patch.yaml
+        template: templates/deployment.yaml
+      - hasDocuments:
+          count: 1
+        template: templates/telemetry.yaml
+
+  - it: keeps extra env next to the telemetry opt-out
+    set:
+      telemetry.enabled: false
+      env: [{ name: FOO, value: bar }]
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: FOO
+            value: bar
+        template: templates/deployment.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DSH_TELEMETRY_DISABLED
+            value: "1"
+        template: templates/deployment.yaml

@@ -130,6 +130,7 @@ jobs:
           helm template dsh helm/dsh | ./kubeconform -strict -summary
           helm template dsh helm/dsh \
             --set ingress.enabled=true --set persistence.enabled=false \
+            --set telemetry.enabled=false --set telemetry.sessionLog=false \
             --set-string podAnnotations.example=true --set-string podLabels.example=true \
             --set 'extraVolumes[0].name=extra' --set 'extraVolumes[0].emptyDir.medium=Memory' \
             --set 'extraVolumeMounts[0].name=extra' --set 'extraVolumeMounts[0].mountPath=/extra' \
