@@ -73,7 +73,7 @@ jobs:
         run: |
           token=$(kubectl logs deploy/dsh | grep -oE 'token=[A-Za-z0-9_-]+' | head -1 | cut -d= -f2)
           # Read the output from the pod log: `kubectl run -i` can miss lines printed before it attaches.
-          kubectl run svc-check --restart=Never --image=curlimages/curl:8.17.0 --command -- sh -c "
+          kubectl run svc-check --restart=Never --image=curlimages/curl:8.23.0 --command -- sh -c "
             for h in dsh.example.com dsh.tail1234.ts.net evil.example.com; do
               curl -s -c /tmp/jar -o /dev/null -H \"Host: \$h\" 'http://dsh:3080/?token=$token'
               echo \"\$h=\$(curl -s -b /tmp/jar -o /dev/null -w '%{http_code}' -H \"Host: \$h\" http://dsh:3080/api/settings)\"
@@ -94,7 +94,7 @@ jobs:
           kubectl exec deploy/dsh -- curl -sS -o /dev/null -m 10 https://github.com
           # Pod-to-pod traffic inside the cluster network is blocked (CoreDNS health port).
           dns=$(kubectl -n kube-system get pod -l k8s-app=kube-dns -o jsonpath='{.items[0].status.podIP}')
-          kubectl run np-control --rm -i --restart=Never --image=curlimages/curl:8.17.0 -- curl -s -m 5 "http://$dns:8080/health"
+          kubectl run np-control --rm -i --restart=Never --image=curlimages/curl:8.23.0 -- curl -s -m 5 "http://$dns:8080/health"
           mustfail kubectl exec deploy/dsh -- curl -s -o /dev/null -m 5 "http://$dns:8080/health"
           # Some CNIs do not police traffic to the API server on the pod's own node; report it, the pod has no token anyway.
           if kubectl exec deploy/dsh -- curl -sk -o /dev/null -m 5 https://kubernetes.default.svc; then
