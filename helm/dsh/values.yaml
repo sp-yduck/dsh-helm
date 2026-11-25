@@ -20,6 +20,19 @@ plugins: []
 env: []
 envFrom: []
 
+# Outbound data. The chart adds no analytics of its own, but dsh can upload a Session
+# log two ways; turn both off to keep conversations inside the cluster.
+telemetry:
+  # OpenTelemetry Session-log export. After in-UI feedback (a rating or note), dsh sends
+  # the Session log to DeepSeek's OTLP collector. false sets DSH_TELEMETRY_DISABLED=1,
+  # which dsh treats as a hard opt-out: feedback then stays in the volume.
+  enabled: true
+  # dsh_session_log request field. dsh attaches the canonical Session log (the whole
+  # conversation) to requests it sends through the official DeepSeek API. false passes a
+  # --patch overlay that disables session-log-deepseek; requests to other providers never
+  # carry this field. The overlay wins over the Web UI switch, which then cannot re-enable it.
+  sessionLog: true
+
 service:
   type: ClusterIP
   # Only for a LoadBalancer Service, e.g. service.k8s.aws/nlb. Empty uses the cluster default.

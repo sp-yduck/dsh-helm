@@ -76,6 +76,11 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
           args:
+            {{- if not .Values.telemetry.sessionLog }}
+            # dsh stops parsing launcher options at the first app argument, so this overlay
+            # comes first. It disables the Session-log request field after the profile layer.
+            - --patch=/etc/dsh/telemetry/patch.yaml
+            {{- end }}
             {{- range (include "dsh.trustedHosts" . | fromYamlArray) }}
             - --trusted-host={{ . }}
             {{- end }}
@@ -93,6 +98,11 @@ spec:
                   fieldPath: status.podIP
             - name: DSH_PORT
               value: "3080"
+            {{- if not .Values.telemetry.enabled }}
+            # Any non-empty value is a hard opt-out of the OpenTelemetry Session-log export.
+            - name: DSH_TELEMETRY_DISABLED
+              value: "1"
+            {{- end }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -113,6 +123,11 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            {{- if not .Values.telemetry.sessionLog }}
+            - name: telemetry-patch
+              mountPath: /etc/dsh/telemetry
+              readOnly: true
+            {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -127,6 +142,11 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- if not .Values.telemetry.sessionLog }}
+        - name: telemetry-patch
+          configMap:
+            name: {{ include "dsh.fullname" . }}-telemetry
+        {{- end }}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

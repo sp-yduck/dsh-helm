@@ -1,0 +1,17 @@
+{{- if not .Values.telemetry.sessionLog }}
+# dsh applies a --patch overlay after its own bundle and profile layers, so this beats the
+# Web UI's "Upload Session Log when using the official model API" switch, which then cannot
+# turn the upload back on. The patch list replaces an entry's config as a whole; the only
+# field here is enabled, so the schema default for maxBytes applies.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dsh.fullname" . }}-telemetry
+  labels:
+    {{- include "dsh.labels" . | nindent 4 }}
+data:
+  patch.yaml: |
+    - id: session-log-deepseek
+      config:
+        enabled: false
+{{- end }}
